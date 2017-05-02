@@ -1,3 +1,22 @@
+*.uasset
+*.umap
+*.exe
+*.dll
+*.db
+*.opendb
+*.cs
+/Config/*
+/Saved/*
+/Intermediate/*
+/Plugins/*
+/Binaries/*
+/Debug/*
+/ipch/*
+/Build/*
+
+###############################
+#default win ignore
+###
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
