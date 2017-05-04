@@ -1,143 +1,256 @@
-// Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
+// Copyright 2016 Carsten Zarbock / Rebound-Software
 
 #include "WhiteNoise.h"
 #include "Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
-#include "Runtime/Engine/Classes/Components/DecalComponent.h"
-#include "Kismet/HeadMountedDisplayFunctionLibrary.h"
 #include "WhiteNoiseCharacter.h"
 
+/* ------------------------------------------
+* AWhiteNoiseCharacter()
+*/
 AWhiteNoiseCharacter::AWhiteNoiseCharacter()
 {
-	// Set size for player capsule
+	/* Setup character capsule */
+	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &AWhiteNoiseCharacter::OnHit);
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
-	// Don't rotate character to camera direction
+	/* disable input character rotation */
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = false; // Rotate character to moving direction
+	/* setup the character movement */
+	GetCharacterMovement()->bOrientRotationToMovement = false; //no character oritation to movement
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 640.f, 0.f);
 	GetCharacterMovement()->bConstrainToPlane = true;
 	GetCharacterMovement()->bSnapToPlaneAtStart = true;
 
+	/* setup components */
+	/* spring arm component to determine the weapon drop / throw location */
 	WeaponThrowArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("WeaponThrowArm"));
 	WeaponThrowArm->SetupAttachment(RootComponent);
 	WeaponThrowArm->TargetArmLength = 150.0f;
 	WeaponThrowArm->bDoCollisionTest = true;
 
-	// Create a camera boom...
+	/* Camera topdown spring arm component */
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->bAbsoluteRotation = true; // Don't want arm to rotate when character does
 	CameraBoom->TargetArmLength = 800.0f;
 	CameraBoom->RelativeRotation = FRotator(-60.f, 0.f, 0.f);
-	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
-										  // Create a camera...
+	CameraBoom->bDoCollisionTest = false; // no collision test, celing gets ignored
+
+	/* top down camera */
 	TopDownCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
 	TopDownCameraComponent->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	TopDownCameraComponent->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	/* socket component to attach the equipped weapon */
 	WeaponGripPoint = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponGripPoint"));
 	WeaponGripPoint->SetupAttachment(this->GetMesh());
 
-	// Activate ticking in order to update the cursor every frame.
+	/* general tick & init stuff */
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-
 	this->SetCurrentWeapon(nullptr);
 	this->SetLockedEnemy(nullptr);
-
-	this->GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &AWhiteNoiseCharacter::OnHit);
-
 }
 
+/* ------------------------------------------
+* Super::BeginPlay()
+*/
 void AWhiteNoiseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	/* mesh(es) not initialised in constructor, attach at beginplay */
 	WeaponGripPoint->AttachToComponent(this->GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("RightHand"));
-	FVector bla = { -90.0f, 170.0f, 80.0f };
-	WeaponGripPoint->SetRelativeRotation(FQuat::MakeFromEuler(bla));
 	
+	/* reset relative rotation after attachement */
+	WeaponGripPoint->SetRelativeRotation(FQuat::MakeFromEuler(FVector(-90.0f, 170.0f, 80.0f))); //todo: Better solution?
 }
 
+/* ------------------------------------------
+* OnHit()
+* UFunction - Fired on physical Hit impact (e.g. Physical Weapon Hit, Door Hit)
+* @Param UPrimitiveComponent* HitComponent
+* @Param AActor* OtherActor
+* @Param UPrimitiveComponent* OtherComponent
+* @Param FVector NormalImpulse
+* @Param HitResult
+*/
+void AWhiteNoiseCharacter::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
+{
+	/* Implement functions for character knockout on physical hits (weapon throw impact, door hit impact, ...) */
+	//GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Green, FString::FromInt(NormalImpulse.Size()));
+}
+
+/* ------------------------------------------
+* Tick()
+* @Param float DeltaSeconds
+*/
 void AWhiteNoiseCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+	
 	this->HandleEnemyLock();
 	
-	if (this->bIsShooting)
+	if (this->GetIsFiring())
 	{
-		this->Weapon_Shot_Execute();
-	}
-
-	if (this->GetCurrentWeapon() != nullptr)
-	{
-		FString Message;
-		Message.Append(FString::FromInt(this->GetCurrentWeapon()->CurAmmo));
-		Message.Append("/");
-		Message.Append(FString::FromInt(this->GetCurrentWeapon()->MaxAmmo));
-		GEngine->AddOnScreenDebugMessage(10, 1.0f, FColor::Emerald, Message);
+		this->WeaponFire_Execute();
 	}
 }
+/* Movement & Camera */
+/* ------------------------------------------
+* HandleMovement()
+* Handles character movement input
+* @Param FVector worldDirection - world direction to move to
+* @Param float fRate - Input Axis Rate amount to move
+*/
+void AWhiteNoiseCharacter::HandleMovement(FVector worldDirection, float fRate)
+{
+	/* Add the actual movement rate input in world direction */
+	this->AddMovementInput(worldDirection, fRate);
+}
 
+/* ------------------------------------------
+* HandleRotation()
+* @Param FVector worldPosition - worldPosition to face to
+* Rotates the character to face the given world position
+*/
+void AWhiteNoiseCharacter::HandleRotation(FVector worldPosition)
+{
+	/* calculate direction vector to face world position */
+	FVector vecDirection = this->GetActorLocation() - worldPosition;
+	vecDirection = FVector(vecDirection.X, vecDirection.Y, 0);
+	vecDirection *= -1; //todo: fix calc
+
+						/* currently only face upper body mesh */
+	FRotator TargetRot = FRotationMatrix::MakeFromX(vecDirection).Rotator();
+	this->SetUpperBodyRotation(TargetRot);
+
+	//todo: handle lower torso rotation, set sidewalk & backwards animations
+	//currently lower torso is facing walk direction, upper body is facing look direction,
+	//results in weird spine rotation
+}
+
+/* ------------------------------------------
+* FreeMoveCamera()
+* @Param FVector worldPosition - worldPosition to face to
+* Moves the camera in free roam mode to the given world direction, based on the rate
+*/
+void AWhiteNoiseCharacter::CameraFreeMove(FVector worldDirection, float fRate)
+{
+	/* apply the move direction to the current relative location */
+	FVector RelLoc = this->TopDownCameraComponent->GetRelativeTransform().GetLocation();
+	RelLoc += worldDirection * fRate;
+
+	/* Reset relative location if the camera location does reach the CameraDistance limit */
+	if (RelLoc.Z >= this->GetCameraFreeDistance() || RelLoc.Z <= (this->GetCameraFreeDistance() * -1))
+	{
+		RelLoc.Z = this->TopDownCameraComponent->GetRelativeTransform().GetLocation().Z;
+	}
+
+	if (RelLoc.Y >= this->GetCameraFreeDistance() || RelLoc.Y <= (this->GetCameraFreeDistance() * -1))
+	{
+		RelLoc.Y = this->TopDownCameraComponent->GetRelativeTransform().GetLocation().Y;
+	}
+
+	/* set the new free roam camera location */
+	this->TopDownCameraComponent->SetRelativeLocation(RelLoc);
+}
+
+/* ------------------------------------------
+* ResetFreeCam()
+* Resets the camera to the initial relative location if free roam mode has ended
+*/
+void AWhiteNoiseCharacter::ResetFreeCam()
+{
+	this->TopDownCameraComponent->SetRelativeLocation(FVector(0, 0, 0));
+}
+
+/* ------------------------------------------
+* GetMouseCursorPosition()
+* Returns projected world location below MouseCursor
+*/
+FVector AWhiteNoiseCharacter::GetMouseCursorPosition()
+{
+	//todo: -probably replace TraceLine with other solution
+	//todo: -replace GetWord()->GetFirstPlayerController() with a Multiplayer compatible solution (Local Splitscreen / Serverside), if needed
+
+	/* Traceline to get the impact point position below mouse cursor */
+	FHitResult Hit;
+	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+
+	if (Hit.bBlockingHit)
+	{
+		return Hit.ImpactPoint;
+	}
+
+	/* no hit, return 0 */
+	return{ 0, 0, 0 }; //todo: bad solution, character faces weird position if no collision occours
+}
+
+
+/* Actions */
+/* ------------------------------------------
+* HandleEnemyLock()
+* Checks if an enemy is locked on, handles character rotation to face locked enemy
+*/
 void AWhiteNoiseCharacter::HandleEnemyLock()
 {
 	if (this->GetLockedEnemy() != nullptr)
 	{
 		if (this->GetLockedEnemy()->IsValidLowLevel())
 		{
+			/* Currently locked on an enemy which is alive */
 			if (this->GetLockedEnemy()->GetStats()->GetIsAlive())
 			{
 				this->HandleRotation(this->GetLockedEnemy()->GetActorLocation());
 			}
 			else
 			{
+				/* locked on a dead enemy, unlock */
 				this->SetLockedEnemy(nullptr);
 			}
 		}
 	}
 }
 
-void AWhiteNoiseCharacter::HandleMovement(FVector vecWorldDirection, float fRate)
+/* ------------------------------------------
+* LockEnemy()
+* @Param AEnemy* enemyActor - enemy actor to lock on
+* Locks the character rotation / aiming to a given enemy actor
+*/
+void AWhiteNoiseCharacter::LockEnemy(AEnemy* enemyActor)
 {
-	/* Add the actual movement input */
-	this->AddMovementInput(vecWorldDirection, fRate);
+	this->SetLockedEnemy(enemyActor);
 }
 
-void AWhiteNoiseCharacter::HandleRotation(FVector vecWorldPosition)
-{
-	FVector vecDirection = this->GetActorLocation() - vecWorldPosition;
-	vecDirection = FVector(vecDirection.X, vecDirection.Y, 0);
-	vecDirection *= -1;
-
-	FRotator Rot = FRotationMatrix::MakeFromX(vecDirection).Rotator();
-	//FRotator SocketRot = this->GetMesh()->GetSocketByName("Spine2")->RelativeRotation;
-	
-	UpperBodyRotation = Rot;
-	//this->SetActorRotation(Rot);
-}
-
+/* Inventory */
+/* ------------------------------------------
+* Input_Pickup()
+* Pickup Input executed by player controller
+*/
 void AWhiteNoiseCharacter::Input_Pickup()
 {
-	/* Add check for item below mouse cursor first */
+	//todo: Add a check, if mouse cursor points on a weapon. Pick up first.
+
+	/* iterate through weapon actors, pick up first one in pickup distance */
 	for (TActorIterator<AWeapon> ActorItr(GetWorld()); ActorItr; ++ActorItr)
 	{
 		AWeapon* WeaponActor = *ActorItr;
 		if (WeaponActor != nullptr && WeaponActor->IsValidLowLevel())
 		{
+			/* only pickup weapon if state is in world, not eqipped */
 			if (WeaponActor->GetState() == EWeaponState::WS_WORLD)
 			{
 				float fDistance = FVector::Dist(this->GetActorLocation(), WeaponActor->GetActorLocation());
 				if (fDistance <= this->GetPickupDistance())
 				{
-					if (!this->Weapon_Pickup(WeaponActor))
+					if (!this->WeaponPickup(WeaponActor))
 					{
-						/* Weapon couldn't be picked up, try again */
-						this->Weapon_Pickup(WeaponActor);
+						/* Weapon could not be picked up (one was already equipped, try again. See @WeaponPickup() */
+						this->WeaponPickup(WeaponActor);
 					}
-
 					return;
 				}
 			}
@@ -145,103 +258,88 @@ void AWhiteNoiseCharacter::Input_Pickup()
 	}
 }
 
-bool AWhiteNoiseCharacter::Weapon_Pickup(AWeapon* TargetWeaponActor)
+/* ------------------------------------------
+* WeaponPickup()
+* @Param AWeapon* weaponActor - weapon actor to pickup
+* Picks up a given weaponActor, drops equipped weapon first
+*/
+bool AWhiteNoiseCharacter::WeaponPickup(AWeapon* weaponActor)
 {
-	if (this->GetCurrentWeapon() == nullptr)
+	if (this->GetCurrentWeapon() != nullptr)
 	{
-		TargetWeaponActor->ChangeState(EWeaponState::WS_EQUIP);
-		this->SetCurrentWeapon(TargetWeaponActor);
-		TargetWeaponActor->AttachToComponent(this->WeaponGripPoint, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-		this->ECurrentAnimation = TargetWeaponActor->GetTargetAnimation();
+		this->WeaponDrop();
+	}
+
+	if (this->GetCurrentWeapon() == nullptr) //better safe than sorry
+	{
+		/* change weapon actor state to eqipped, and pickup */
+		weaponActor->ChangeState(EWeaponState::WS_EQUIP);
+		this->SetCurrentWeapon(weaponActor);
+		weaponActor->AttachToComponent(this->WeaponGripPoint, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+		/* Set player animation to weapon type animation (e.g. rifle, 2 handed, ...) */
+		this->SetCurrentAnimation(weaponActor->GetTargetAnimation());
 		return true;
 	}
-	else
-	{
-		/* drop current weapon */
-		this->Weapon_Drop();
-	}
+
 	return false;
 }
 
-void AWhiteNoiseCharacter::Weapon_Drop()
+/* ------------------------------------------
+* WeaponDrop()
+* Drops the current equipped weapon
+*/
+void AWhiteNoiseCharacter::WeaponDrop()
 {
 	if (this->GetCurrentWeapon() != nullptr && this->GetCurrentWeapon()->IsValidLowLevel())
 	{
+		/* Detach weapon actor from character, place to throw / drop location, change weapon state to world */
 		this->GetCurrentWeapon()->DetachRootComponentFromParent(true);
-		FVector vecNewLocation = this->GetActorLocation() + (UpperBodyRotation.Vector() * 150);
-		this->GetCurrentWeapon()->SetActorLocation(vecNewLocation);
+		FVector newLocation = this->WeaponThrowArm->GetSocketLocation(USpringArmComponent::SocketName);
+		this->GetCurrentWeapon()->SetActorLocation(newLocation);
 		this->GetCurrentWeapon()->ChangeState(EWeaponState::WS_WORLD);
+		
+		/* no weapon equipped, set character animation back to normal */
 		this->SetCurrentWeapon(nullptr);
-		this->ECurrentAnimation = ETargetAnimation::TA_NORMAL;
+		this->SetCurrentAnimation(ETargetAnimation::TA_NORMAL);
 	}
 }
 
-void AWhiteNoiseCharacter::Weapon_Throw()
+/* ------------------------------------------
+* WeaponThrow()
+* Throws the current equipped weapon
+*/
+void AWhiteNoiseCharacter::WeaponThrow()
 {
 	if (this->GetCurrentWeapon() != nullptr && this->GetCurrentWeapon()->IsValidLowLevel() && !this->GetCameraFreeMove())
 	{
-		this->GetCurrentWeapon()->DetachRootComponentFromParent(true);
-		//FVector vecNewLocation = this->GetActorLocation() + (UpperBodyRotation.Vector() * 150);
-		FVector vecNewLocation = this->WeaponThrowArm->GetSocketLocation(USpringArmComponent::SocketName);
+		/* drop the weapon */
+		AWeapon* weaponActor = this->GetCurrentWeapon();
+		this->WeaponDrop();
 
-		this->GetCurrentWeapon()->SetActorLocation(vecNewLocation);
-		this->GetCurrentWeapon()->ChangeState(EWeaponState::WS_THROWN);
-		this->GetCurrentWeapon()->WeaponMesh->AddImpulseAtLocation((UpperBodyRotation.Vector() * 100000), this->GetCurrentWeapon()->GetActorLocation());
-		this->SetCurrentWeapon(nullptr);
-		this->ECurrentAnimation = ETargetAnimation::TA_NORMAL;
+		/* change state to thrown and apply force */
+		const float throwForce = 100000.0f; //todo: calculate the force
+		weaponActor->ChangeState(EWeaponState::WS_THROWN);
+		weaponActor->WeaponMesh->AddImpulseAtLocation((this->GetUpperBodyRotation().Vector() * throwForce), weaponActor->GetActorLocation());
 	}
 }
 
-void AWhiteNoiseCharacter::FreeMoveCameraUp(float fRate)
-{
-	GEngine->AddOnScreenDebugMessage(1, 1.0f, FColor::Red, FString::FromInt(fRate));
-	FVector RelLoc = this->TopDownCameraComponent->GetRelativeTransform().GetLocation();
-	RelLoc.Z += fRate;
-	if (RelLoc.Z < this->GetCameraFreeDistance() && RelLoc.Z > (this->GetCameraFreeDistance() * -1))
-	{
-		this->TopDownCameraComponent->SetRelativeLocation(RelLoc);
-	}
-}
-
-void AWhiteNoiseCharacter::FreeMoveCameraSide(float fRate)
-{
-	GEngine->AddOnScreenDebugMessage(2, 1.0f, FColor::Orange, FString::FromInt(fRate));
-	FVector RelLoc = this->TopDownCameraComponent->GetRelativeTransform().GetLocation();
-	RelLoc.Y += fRate;
-
-	if (RelLoc.Y < this->GetCameraFreeDistance() && RelLoc.Y > (this->GetCameraFreeDistance() * -1))
-	{
-		this->TopDownCameraComponent->SetRelativeLocation(RelLoc);
-	}
-}
-
-void AWhiteNoiseCharacter::ResetFreeCam()
-{
-	this->TopDownCameraComponent->SetRelativeLocation(FVector(0, 0, 0));
-}
-
-void AWhiteNoiseCharacter::LockEnemy(AEnemy* AEnemyActor)
-{
-	//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, "Enemy Locked");
-	this->SetLockedEnemy(AEnemyActor);
-}
-
-void AWhiteNoiseCharacter::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
-{
-	//GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Green, "AWhiteNoiseCharacter");
-	//GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Green, FString::FromInt(NormalImpulse.Size()));
-}
-
-void AWhiteNoiseCharacter::Weapon_Shot_Execute()
+/* ------------------------------------------
+* WeaponFire_Execute()
+* Executes the (Single) Fire Function of the current weapon, either free position or locked enemy position 
+*/
+void AWhiteNoiseCharacter::WeaponFire_Execute()
 {
 	if (this->GetCurrentWeapon() != nullptr && this->GetCurrentWeapon()->IsValidLowLevel() && !this->GetCameraFreeMove())
 	{
+		/* not locked on an enemy, use the cursor position as target position */
 		if (this->GetLockedEnemy() == nullptr)
 		{
 			this->GetCurrentWeapon()->Fire(this->GetMouseCursorPosition());
 		}
 		else
 		{
+			/* locked on an enemy, use the enemy position as target position */
 			if (this->GetLockedEnemy()->IsValidLowLevel())
 			{
 				this->GetCurrentWeapon()->Fire(this->GetLockedEnemy()->GetActorLocation());
@@ -250,38 +348,32 @@ void AWhiteNoiseCharacter::Weapon_Shot_Execute()
 	}
 }
 
-void AWhiteNoiseCharacter::Weapon_Fire()
+/* ------------------------------------------
+* WeaponFire()
+* Handles the fire of a weapon, based on the weapon type. Enables automatic shooting on automatic weapon
+*/
+void AWhiteNoiseCharacter::WeaponFire()
 {
 	if (this->GetCurrentWeapon() != nullptr && this->GetCurrentWeapon()->IsValidLowLevel() && !this->GetCameraFreeMove())
 	{
+		/* single shot weapon, execute one shot directly */
 		if (this->GetCurrentWeapon()->WeaponType == EWeaponType::WT_SINGLE)
 		{
-			this->Weapon_Shot_Execute();
+			this->WeaponFire_Execute();
 		}
 		else if (this->GetCurrentWeapon()->WeaponType == EWeaponType::WT_AUTOMATIC)
 		{
-			//set is shooting
-			this->bIsShooting = true;
+			/* automatic shooting weapon, enable to shoot over time (handled by tick) */
+			this->SetIsFiring(true);
 		}
 	}
 }
 
-void AWhiteNoiseCharacter::Weapon_Fire_Stop()
+/* ------------------------------------------
+* WeaponFire_Stop()
+* Stops automatic fire mode, executed on controller input "Fire" released
+*/
+void AWhiteNoiseCharacter::WeaponFire_Stop()
 {
-	//set !shotting
-	this->bIsShooting = false;
-}
-
-FVector AWhiteNoiseCharacter::GetMouseCursorPosition()
-{
-	// Trace to see what is under the mouse cursor
-	FHitResult Hit;
-	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursor(ECC_Visibility, false, Hit);
-
-	if (Hit.bBlockingHit)
-	{
-		// We hit something, move there
-		return Hit.ImpactPoint;
-	}
-	return{ 0, 0, 0 };
+	this->SetIsFiring(false);
 }
