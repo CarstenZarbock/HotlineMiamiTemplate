@@ -1,5 +1,4 @@
-// Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
-
+// Copyright 2016 Carsten Zarbock / Rebound-Software
 #include "WhiteNoise.h"
 #include "WhiteNoiseGameMode.h"
 #include "WhiteNoisePlayerController.h"

@@ -1,16 +1,12 @@
-// Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
+// Copyright 2016 Carsten Zarbock / Rebound-Software
 
 #include "WhiteNoise.h"
 #include "WhiteNoisePlayerController.h"
-#include "AI/Navigation/NavigationSystem.h"
-#include "Runtime/Engine/Classes/Components/DecalComponent.h"
-#include "Kismet/HeadMountedDisplayFunctionLibrary.h"
 #include "Enemy.h"
 
 AWhiteNoisePlayerController::AWhiteNoisePlayerController()
 {
 	bShowMouseCursor = false;
-	DefaultMouseCursor = EMouseCursor::Crosshairs;
 }
 
 void AWhiteNoisePlayerController::PlayerTick(float DeltaTime)
@@ -25,10 +21,7 @@ void AWhiteNoisePlayerController::PlayerTick(float DeltaTime)
 
 void AWhiteNoisePlayerController::SetupInputComponent()
 {
-	// set up gameplay key bindings
 	Super::SetupInputComponent();
-
-	
 	InputComponent->BindAxis("MoveForward", this, &AWhiteNoisePlayerController::MoveForward);
 	InputComponent->BindAxis("MoveSideward", this, &AWhiteNoisePlayerController::MoveSideward);
 	InputComponent->BindAction("Pickup", EInputEvent::IE_Pressed, this, &AWhiteNoisePlayerController::PickupObject);
@@ -69,37 +62,32 @@ void AWhiteNoisePlayerController::CameraFreeMoveHandle(float DeltaSeconds)
 	GEngine->AddOnScreenDebugMessage(3, 10.0f, FColor::Cyan, Message);
 
 
-	if (fLocX <= fMoveX)
+	if (PlayerPawn != nullptr)
 	{
-		//**** left
-		if (PlayerPawn != nullptr)
+		if (fLocX <= fMoveX)
 		{
-			PlayerPawn->FreeMoveCameraSide(fMoveSpeed * -1);
+			//**** left
+			const FVector vecWorldDirection = { 0, 1, 0 };
+			PlayerPawn->CameraFreeMove(vecWorldDirection, fMoveSpeed * -1);
 		}
-	}
-	else if (fLocX >= ViewportSize.X - fMoveX)
-	{
-		//**** right
-		if (PlayerPawn != nullptr)
+		else if (fLocX >= ViewportSize.X - fMoveX)
 		{
-			PlayerPawn->FreeMoveCameraSide(fMoveSpeed);
+			//**** right
+			const FVector vecWorldDirection = { 0, 1, 0 };
+			PlayerPawn->CameraFreeMove(vecWorldDirection, fMoveSpeed);
 		}
-	}
 
-	if (fLocY <= fMoveY)
-	{
-		//**** up
-		if (PlayerPawn != nullptr)
+		if (fLocY <= fMoveY)
 		{
-			PlayerPawn->FreeMoveCameraUp(fMoveSpeed);
+			//**** up
+			const FVector vecWorldDirection = { 0, 0, 1 };
+			PlayerPawn->CameraFreeMove(vecWorldDirection, fMoveSpeed);
 		}
-	}
-	else if (fLocY >= ViewportSize.Y - fMoveY)
-	{
-		//**** down
-		if (PlayerPawn != nullptr)
+		else if (fLocY >= ViewportSize.Y - fMoveY)
 		{
-			PlayerPawn->FreeMoveCameraUp(fMoveSpeed * -1);
+			//**** down
+			const FVector vecWorldDirection = { 0, 0, 1 };
+			PlayerPawn->CameraFreeMove(vecWorldDirection, fMoveSpeed * -1);
 		}
 	}
 
@@ -162,7 +150,7 @@ void AWhiteNoisePlayerController::Fire()
 {
 	if (PlayerPawn != nullptr)
 	{
-		PlayerPawn->Weapon_Fire();
+		PlayerPawn->WeaponFire();
 	}
 }
 
@@ -170,7 +158,7 @@ void AWhiteNoisePlayerController::Fire_Stop()
 {
 	if (PlayerPawn != nullptr)
 	{
-		PlayerPawn->Weapon_Fire_Stop();
+		PlayerPawn->WeaponFire_Stop();
 	}
 }
 
@@ -180,7 +168,7 @@ void AWhiteNoisePlayerController::Throw()
 	{
 		if (!this->GetCameraFreeMovement())
 		{
-			PlayerPawn->Weapon_Throw();
+			PlayerPawn->WeaponThrow();
 		}
 	}
 }
