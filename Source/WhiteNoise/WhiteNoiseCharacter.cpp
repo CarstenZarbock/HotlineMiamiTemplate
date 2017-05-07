@@ -248,8 +248,7 @@ void AWhiteNoiseCharacter::Input_Pickup()
 				{
 					if (!this->WeaponPickup(WeaponActor))
 					{
-						/* Weapon could not be picked up (one was already equipped, try again. See @WeaponPickup() */
-						this->WeaponPickup(WeaponActor);
+						//ULOG Something went wrong.
 					}
 					return;
 				}
