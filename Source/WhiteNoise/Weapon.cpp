@@ -1,8 +1,6 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright 2016 Carsten Zarbock / Rebound-Software
 #include "WhiteNoise.h"
 #include "Weapon.h"
-#include "Engine.h"
 #include "Enemy.h"
 #include "WhiteNoiseCharacter.h"
 
@@ -32,7 +30,7 @@ void AWeapon::BeginPlay()
 		AWhiteNoiseCharacter* PlayerChar = Cast<AWhiteNoiseCharacter>(GetWorld()->GetFirstPlayerController()->GetPawn());
 		if (PlayerChar != nullptr && PlayerChar->IsValidLowLevel())
 		{
-			PlayerChar->Weapon_Pickup(this);
+			PlayerChar->WeaponPickup(this);
 		}
 	}
 }

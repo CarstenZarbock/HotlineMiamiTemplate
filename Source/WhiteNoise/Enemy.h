@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright 2016 Carsten Zarbock / Rebound-Software
 #pragma once
 
 #include "GameFramework/Character.h"

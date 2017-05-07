@@ -1,9 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright 2016 Carsten Zarbock / Rebound-Software
 #pragma once
 
 #include "GameFramework/Actor.h"
-#include "Engine.h"
+#include "Engine.h" //todo: Change to IWYU System
 #include "Weapon.generated.h"
 
 UENUM(BlueprintType)
