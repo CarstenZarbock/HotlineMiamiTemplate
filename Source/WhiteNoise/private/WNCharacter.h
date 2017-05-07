@@ -3,7 +3,7 @@
 #include "GameFramework/Character.h"
 #include "Engine.h" //todo: Change to IWYU System
 #include "Weapon.h"
-#include "Enemy.h"
+#include "NPC.h"
 #include "WhiteNoiseCharacter.generated.h"
 
 UCLASS(Blueprintable)
@@ -36,7 +36,7 @@ private:
 	FRotator UpperBodyRotation;
 
 	/* Actions */
-	AEnemy* LockedEnemy;
+	ANPC* LockedEnemy;
 
 public:
 	AWhiteNoiseCharacter();
@@ -49,31 +49,22 @@ public:
 
 	/* Animation */
 	UFUNCTION(BlueprintCallable, Category = "Animations")
-	ETargetAnimation GetCurrentAnimation() { return CurrentAnimation; }
-	ETargetAnimation SetCurrentAnimation(ETargetAnimation animationState) { CurrentAnimation = animationState; return CurrentAnimation; }
+		ETargetAnimation GetCurrentAnimation() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Animations")
-	FRotator GetUpperBodyRotation() { return UpperBodyRotation; }
-	FRotator SetUpperBodyRotation(FRotator bodyRotation) { UpperBodyRotation = bodyRotation; return UpperBodyRotation; }
+		FRotator GetUpperBodyRotation() const;
 
 	/* Movement & Camera */
-	float GetCameraFreeDistance() { return MaxFreeCamDistance; }
-	float SetCameraFreeDistance(float cameraDistance) { MaxFreeCamDistance = cameraDistance; return MaxFreeCamDistance; }
-	bool SetCameraFreeMove(bool cameraFreeMove) { bIsCameraFreeMovement = cameraFreeMove; return bIsCameraFreeMovement; }
-	bool GetCameraFreeMove() { return bIsCameraFreeMovement; }
 	void HandleMovement(FVector worldDirection, float fRate);
 	void HandleRotation(FVector worldPosition);
 	void CameraFreeMove(FVector worldDirection, float fRate);
 	void ResetFreeCam();
-	FVector GetMouseCursorPosition();
+	FVector GetMouseCursorPosition() const;
 
 	/* Inventory */
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	AWeapon* GetCurrentWeapon() { return CurrentWeapon; }
-	AWeapon* SetCurrentWeapon(AWeapon* weaponActor) { CurrentWeapon = weaponActor; return CurrentWeapon; }
-	float GetPickupDistance() { return WeaponPickupDistance; }
-	float SetPickupDistance(float pickupDistance) { WeaponPickupDistance = pickupDistance; return WeaponPickupDistance; }
-	bool GetIsFiring() { return bIsFiring; }
-	bool SetIsFiring(bool fireStatus) { bIsFiring = fireStatus; return bIsFiring; }
+		AWeapon* GetCurrentWeapon() const;
+
 	void Input_Pickup();
 	bool WeaponPickup(AWeapon* weaponActor);
 	void WeaponThrow();
@@ -84,9 +75,9 @@ public:
 
 	/* Actions */
 	UFUNCTION(BlueprintCallable, Category = "Actions")
-	AEnemy* GetLockedEnemy() { return LockedEnemy; }
-	AEnemy* SetLockedEnemy(AEnemy* enemyActor) { LockedEnemy = enemyActor; return enemyActor; }
-	void LockEnemy(AEnemy* enemyActor);
+	ANPC* GetLockedEnemy() const;
+
+	void LockEnemy(ANPC* enemyActor);
 	void HandleEnemyLock();
 
 	/* */

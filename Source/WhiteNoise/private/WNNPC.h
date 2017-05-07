@@ -2,8 +2,7 @@
 #pragma once
 
 #include "GameFramework/Character.h"
-#include "Weapon.h"
-#include "Enemy.generated.h"
+#include "NPC.generated.h"
 
 UENUM(BlueprintType)
 enum class EEnemyMovement : uint8
@@ -34,18 +33,6 @@ enum class ETargetEnemyState : uint8
 {
 	TES_CRAWL		UMETA(DisplayName = "CRAWLING"),
 	TES_DEAD		UMETA(DisplayName = "DEAD")
-};
-
-UENUM(BlueprintType)
-enum class ECharacterLimbs : uint8
-{
-	LIMB_HEAD			UMETA(DisplayName = "HEAD"),
-	LIMB_TORSO			UMETA(DisplayName = "TORSO"),
-	LIMB_ARMLEFT		UMETA(DisplayName = "ARMLEFT"),
-	LIMB_ARMRIGHT		UMETA(DisplayName = "ARMRIGHT"),
-	LIMB_BOTTOM			UMETA(DisplayName = "BOTTOM"),
-	LIMB_LEGLEFT		UMETA(DisplayName = "LEGLEFT"),
-	LIMB_LEGRIGHT		UMETA(DisplayName = "LEGRIGHT")
 };
 
 USTRUCT(BlueprintType)
@@ -121,35 +108,21 @@ public:
 };
 
 UCLASS()
-class WHITENOISE_API AEnemy : public ACharacter
+class WHITENOISE_API ANPC : public ACharacter
 {
 	GENERATED_BODY()
 private:
 	FStatx stats;
 	FCrawlState CrawlState;
-	AWeapon* ACurrentWeapon;
 	FAIState AIState;
 
-	FVector GetRandomWalkpoint(bool inRange, float Range);
-	void ChangeState(ETargetEnemyState ENewState);
-	void ChangeMovementState(EEnemyMovementState ENewState);
-	void HandleCrawl();
-	void HandleAITypes();
-	bool WalkToLocation(FVector vecDestinationLocation);
-	void ExecuteDeathFullsplat(FVector vecDirection);
-	void ExecuteDeathAnimation(FVector vecDirection);
-	void CutLimb(USkeletalMeshComponent* LimbMesh);
-	void HandleAI();
-	void ActivateGoreParticles(ECharacterLimbs ECutLimb);
-	FHitResult TraceLine(FVector Start, FVector End, bool Debug);
-	void SpawnStartWeapon();
-
 public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
-		ETargetAnimation ECurrentAnimation;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-		TSubclassOf<AWeapon> AStarterWeapon;
+	void ChangeState(ETargetEnemyState ENewState);
+	virtual void HandleAI();
+	FVector GetRandomWalkpoint(bool inRange, float Range);
+	void ChangeMovementState(EEnemyMovementState ENewState);
+	bool WalkToLocation(FVector vecDestinationLocation);
+	FHitResult TraceLine(FVector Start, FVector End, bool Debug);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
 	EEnemyMovement EEnemyType;
@@ -160,52 +133,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Stats")
 		int iMaxHealth;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory")
-		class USceneComponent* WeaponGripPoint;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Mesh")
-		USkeletalMeshComponent* MeshTorso;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Mesh")
-		USkeletalMeshComponent* MeshArmLeft;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Mesh")
-		USkeletalMeshComponent* MeshArmRight;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Mesh")
-		USkeletalMeshComponent* MeshHead;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Mesh")
-		USkeletalMeshComponent* MeshLegLeft;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Mesh")
-		USkeletalMeshComponent* MeshLegRight;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* ArmLeftGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* ArmRightGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* HeadGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* LegRightGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* LegLeftGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* TorsoHeadGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* TorsoBottomGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* TorsoArmLeftGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* TorsoArmRightGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* BottomTorsoGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* BottomLeftLegGore;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
-		UParticleSystemComponent* BottomRightLegGore;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 		UAnimationAsset* DeathAnimation_1;
 
 	// Sets default values for this character's properties
-	AEnemy();
+	ANPC();
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -213,9 +146,6 @@ public:
 	// Called every frame
 	virtual void Tick( float DeltaSeconds ) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
 
@@ -223,10 +153,7 @@ public:
 	FCrawlState* GetCrawlState() { return &CrawlState; }
 	FAIState* GetAIState() { return &AIState; }
 
-	UFUNCTION(BlueprintCallable, Category = "SunShine")
-		bool BP_GetIsCrawling() { return this->GetStats()->GetIsCrawling(); }
-
-	void DamageApply(int iDamageAmount, FVector vecDirection);
+	virtual void DamageApply(int iDamageAmount, FVector vecDirection);
 
 	/* stats */
 	int GetMaxHealth() { return iMaxHealth; }
@@ -238,11 +165,8 @@ public:
 
 	FMovementStats* GetMovement() { return &MovementStats; }
 
-	AWeapon* GetWeapon() { return ACurrentWeapon; }
-	AWeapon* SetWeapon(AWeapon* ANewWeaponObject) { ACurrentWeapon = ANewWeaponObject; return ACurrentWeapon; }
-
-	bool Weapon_Pickup(AWeapon* TargetWeaponActor);
-	void Weapon_Drop();
-
 	bool PlayerInSight();
+
+	UFUNCTION(BlueprintCallable, Category = "SunShine")
+		bool BP_GetIsCrawling() { return this->GetStats()->GetIsCrawling(); }
 };

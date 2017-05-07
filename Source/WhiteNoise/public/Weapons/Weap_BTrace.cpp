@@ -1,7 +1,7 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 #include "WhiteNoise.h"
 #include "BulletTrace.h"
-#include "Enemy.h"
+#include "NPC.h"
 
 ABulletTrace::ABulletTrace()
 {
@@ -40,7 +40,7 @@ void ABulletTrace::Fire(FVector vecTargetLocation)
 				if (Hit.GetActor() != nullptr && Hit.GetActor()->IsValidLowLevel())
 				{
 					AActor* HitActor = Hit.GetActor();
-					AEnemy* EnemyActor = Cast<AEnemy>(HitActor);
+					ANPC* EnemyActor = Cast<ANPC>(HitActor);
 					if (EnemyActor != nullptr)
 					{
 						FVector vecDirection = this->WeaponShotPoint->GetComponentLocation() - EnemyActor->GetActorLocation();

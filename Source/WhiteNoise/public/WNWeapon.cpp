@@ -1,7 +1,7 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 #include "WhiteNoise.h"
 #include "Weapon.h"
-#include "Enemy.h"
+#include "NPC.h"
 #include "WhiteNoiseCharacter.h"
 
 // Sets default values
@@ -121,7 +121,7 @@ void AWeapon::ChangeState(EWeaponState ENewState)
 
 void AWeapon::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (Cast<AEnemy>(OtherActor) != nullptr)
+	if (Cast<ANPC>(OtherActor) != nullptr)
 	{
 		//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, "AWeapon");
 		//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, FString::FromInt(NormalImpulse.Size()));

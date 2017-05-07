@@ -2,7 +2,7 @@
 
 #include "WhiteNoise.h"
 #include "WhiteNoisePlayerController.h"
-#include "Enemy.h"
+#include "NPC.h"
 
 AWhiteNoisePlayerController::AWhiteNoisePlayerController()
 {
@@ -181,7 +181,7 @@ void AWhiteNoisePlayerController::LockEnemy()
 
 	if (Hit.bBlockingHit)
 	{
-		AEnemy* TargetEnemy = Cast<AEnemy>(Hit.GetActor());
+		ANPC* TargetEnemy = Cast<ANPC>(Hit.GetActor());
 		if (TargetEnemy != nullptr && TargetEnemy->IsValidLowLevel())
 		{
 			PlayerPawn->LockEnemy(TargetEnemy);

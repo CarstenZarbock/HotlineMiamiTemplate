@@ -171,7 +171,7 @@ void AWhiteNoiseCharacter::ResetFreeCam()
 * GetMouseCursorPosition()
 * Returns projected world location below MouseCursor
 */
-FVector AWhiteNoiseCharacter::GetMouseCursorPosition()
+FVector AWhiteNoiseCharacter::GetMouseCursorPosition() const
 {
 	//todo: -probably replace TraceLine with other solution
 	//todo: -replace GetWord()->GetFirstPlayerController() with a Multiplayer compatible solution (Local Splitscreen / Serverside), if needed
@@ -220,7 +220,7 @@ void AWhiteNoiseCharacter::HandleEnemyLock()
 * @Param AEnemy* enemyActor - enemy actor to lock on
 * Locks the character rotation / aiming to a given enemy actor
 */
-void AWhiteNoiseCharacter::LockEnemy(AEnemy* enemyActor)
+void AWhiteNoiseCharacter::LockEnemy(ANPC* enemyActor)
 {
 	this->SetLockedEnemy(enemyActor);
 }
@@ -375,4 +375,84 @@ void AWhiteNoiseCharacter::WeaponFire()
 void AWhiteNoiseCharacter::WeaponFire_Stop()
 {
 	this->SetIsFiring(false);
+}
+
+ANPC* AWhiteNoiseCharacter::GetLockedEnemy() const
+{
+	return this->LockedEnemy;
+}
+
+void AWhiteNoiseCharacter::SetLockedEnemy(ANPC* LockedEnemy)
+{
+	this->LockedEnemy = LockedEnemy;
+}
+
+AWeapon* AWhiteNoiseCharacter::GetCurrentWeapon() const
+{
+	return this->CurrentWeapon; 
+}
+
+float AWhiteNoiseCharacter::GetPickupDistance() const
+{
+	return this->WeaponPickupDistance;
+}
+
+bool AWhiteNoiseCharacter::GetIsFiring() const
+{
+	return this->bIsFiring; 
+}
+
+void AWhiteNoiseCharacter::SetCurrentWeapon(const AWeapon* CurrentWeapon)
+{
+	this->CurrentWeapon = CurrentWeapon;
+}
+
+void AWhiteNoiseCharacter::SetPickupDistance(const float WeaponPickupDistance)
+{
+	this->WeaponPickupDistance = WeaponPickupDistance;
+}
+
+void AWhiteNoiseCharacter::SetIsFiring(const bool bIsFiring)
+{
+	this->bIsFiring = bIsFiring;
+}
+
+float AWhiteNoiseCharacter::GetCameraFreeDistance() const
+{
+	return MaxFreeCamDistance;
+}
+
+bool AWhiteNoiseCharacter::GetCameraFreeMove() const 
+{
+	return bIsCameraFreeMovement;
+}
+
+void AWhiteNoiseCharacter::SetCameraFreeDistance(const float MaxFreeCamDistance)
+{
+	this->MaxFreeCamDistance = MaxFreeCamDistance;
+}
+
+void AWhiteNoiseCharacter::SetCameraFreeMove(const bool bIsCameraFreeMovement)
+{
+	this->bIsCameraFreeMovement = bIsCameraFreeMovement;
+}
+
+ETargetAnimation AWhiteNoiseCharacter::GetCurrentAnimation() const
+{
+	return CurrentAnimation; 
+}
+
+void AWhiteNoiseCharacter::SetCurrentAnimation(const ETargetAnimation CurrentAnimation)
+{
+	this->CurrentAnimation = CurrentAnimation;
+}
+
+FRotator AWhiteNoiseCharacter::GetUpperBodyRotation() const 
+{ 
+	return UpperBodyRotation; 
+}
+
+void AWhiteNoiseCharacter::SetUpperBodyRotation(const FRotator UpperBodyRotation)
+{
+	this->UpperBodyRotation = UpperBodyRotation;
 }
