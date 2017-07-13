@@ -2,7 +2,8 @@
 
 #include "WhiteNoise.h"
 #include "Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
-#include "WhiteNoiseCharacter.h"
+#include "WNCharacter.h"
+#include "Door_SwingSingle.h"
 
 /* ------------------------------------------
 * AWhiteNoiseCharacter()
@@ -51,8 +52,8 @@ AWhiteNoiseCharacter::AWhiteNoiseCharacter()
 	/* general tick & init stuff */
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	this->SetCurrentWeapon(nullptr);
-	this->SetLockedEnemy(nullptr);
+	this->CurrentWeapon = nullptr;
+	this->LockedEnemy = nullptr;
 }
 
 /* ------------------------------------------
@@ -81,6 +82,12 @@ void AWhiteNoiseCharacter::OnHit(UPrimitiveComponent* HitComponent, AActor* Othe
 {
 	/* Implement functions for character knockout on physical hits (weapon throw impact, door hit impact, ...) */
 	//GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Green, FString::FromInt(NormalImpulse.Size()));
+	ADoorSwingSingle* Door = Cast<ADoorSwingSingle>(OtherActor);
+
+	if (Door)
+	{
+		Door->Open(this->GetActorLocation() - Door->GetActorLocation());
+	}
 }
 
 /* ------------------------------------------
@@ -93,7 +100,7 @@ void AWhiteNoiseCharacter::Tick(float DeltaSeconds)
 	
 	this->HandleEnemyLock();
 	
-	if (this->GetIsFiring())
+	if (this->bIsFiring)
 	{
 		this->WeaponFire_Execute();
 	}
@@ -125,7 +132,7 @@ void AWhiteNoiseCharacter::HandleRotation(FVector worldPosition)
 
 						/* currently only face upper body mesh */
 	FRotator TargetRot = FRotationMatrix::MakeFromX(vecDirection).Rotator();
-	this->SetUpperBodyRotation(TargetRot);
+	this->UpperBodyRotation = TargetRot;
 
 	//todo: handle lower torso rotation, set sidewalk & backwards animations
 	//currently lower torso is facing walk direction, upper body is facing look direction,
@@ -144,12 +151,12 @@ void AWhiteNoiseCharacter::CameraFreeMove(FVector worldDirection, float fRate)
 	RelLoc += worldDirection * fRate;
 
 	/* Reset relative location if the camera location does reach the CameraDistance limit */
-	if (RelLoc.Z >= this->GetCameraFreeDistance() || RelLoc.Z <= (this->GetCameraFreeDistance() * -1))
+	if (RelLoc.Z >= this->MaxFreeCamDistance || RelLoc.Z <= (this->MaxFreeCamDistance * -1))
 	{
 		RelLoc.Z = this->TopDownCameraComponent->GetRelativeTransform().GetLocation().Z;
 	}
 
-	if (RelLoc.Y >= this->GetCameraFreeDistance() || RelLoc.Y <= (this->GetCameraFreeDistance() * -1))
+	if (RelLoc.Y >= this->MaxFreeCamDistance || RelLoc.Y <= (this->MaxFreeCamDistance * -1))
 	{
 		RelLoc.Y = this->TopDownCameraComponent->GetRelativeTransform().GetLocation().Y;
 	}
@@ -165,6 +172,19 @@ void AWhiteNoiseCharacter::CameraFreeMove(FVector worldDirection, float fRate)
 void AWhiteNoiseCharacter::ResetFreeCam()
 {
 	this->TopDownCameraComponent->SetRelativeLocation(FVector(0, 0, 0));
+}
+
+bool AWhiteNoiseCharacter::CameraFreeMoveToggle(const bool bIsCameraFreeMovement)
+{
+	/* if Cutscene (e.g.) return false; */
+	this->bIsCameraFreeMovement = bIsCameraFreeMovement;
+
+	if (!this->bIsCameraFreeMovement)
+	{
+		this->ResetFreeCam();
+	}
+
+	return this->bIsCameraFreeMovement;
 }
 
 /* ------------------------------------------
@@ -189,6 +209,13 @@ FVector AWhiteNoiseCharacter::GetMouseCursorPosition() const
 	return{ 0, 0, 0 }; //todo: bad solution, character faces weird position if no collision occours
 }
 
+void AWhiteNoiseCharacter::ManualRotation(const FVector worldPosition)
+{
+	if (!this->bHasLockedEnemy)
+	{
+		this->HandleRotation(worldPosition);
+	}
+}
 
 /* Actions */
 /* ------------------------------------------
@@ -197,19 +224,20 @@ FVector AWhiteNoiseCharacter::GetMouseCursorPosition() const
 */
 void AWhiteNoiseCharacter::HandleEnemyLock()
 {
-	if (this->GetLockedEnemy() != nullptr)
+	if (this->bHasLockedEnemy && this->LockedEnemy != nullptr)
 	{
-		if (this->GetLockedEnemy()->IsValidLowLevel())
+		if (this->LockedEnemy->IsValidLowLevel())
 		{
 			/* Currently locked on an enemy which is alive */
-			if (this->GetLockedEnemy()->GetStats()->GetIsAlive())
+			if (this->LockedEnemy->IsAlive())
 			{
-				this->HandleRotation(this->GetLockedEnemy()->GetActorLocation());
+				this->HandleRotation(this->LockedEnemy->GetActorLocation());
 			}
 			else
 			{
 				/* locked on a dead enemy, unlock */
-				this->SetLockedEnemy(nullptr);
+				this->LockedEnemy = nullptr;
+				this->bHasLockedEnemy = false;
 			}
 		}
 	}
@@ -220,9 +248,20 @@ void AWhiteNoiseCharacter::HandleEnemyLock()
 * @Param AEnemy* enemyActor - enemy actor to lock on
 * Locks the character rotation / aiming to a given enemy actor
 */
-void AWhiteNoiseCharacter::LockEnemy(ANPC* enemyActor)
+bool AWhiteNoiseCharacter::LockEnemy(ANPC* LockedEnemy)
 {
-	this->SetLockedEnemy(enemyActor);
+	if (LockedEnemy != nullptr && LockedEnemy->IsValidLowLevel())
+	{
+		this->bHasLockedEnemy = true;
+		this->LockedEnemy = LockedEnemy;
+	}
+	else
+	{
+		this->bHasLockedEnemy = false;
+		this->LockedEnemy = nullptr;
+	}
+
+	return this->bHasLockedEnemy;
 }
 
 /* Inventory */
@@ -244,16 +283,21 @@ void AWhiteNoiseCharacter::Input_Pickup()
 			if (WeaponActor->GetState() == EWeaponState::WS_WORLD)
 			{
 				float fDistance = FVector::Dist(this->GetActorLocation(), WeaponActor->GetActorLocation());
-				if (fDistance <= this->GetPickupDistance())
+				if (fDistance <= this->WeaponPickupDistance)
 				{
-					if (!this->WeaponPickup(WeaponActor))
-					{
-						//ULOG Something went wrong.
-					}
+					this->WeaponPickup(WeaponActor);
 					return;
 				}
 			}
 		}
+	}
+}
+
+void AWhiteNoiseCharacter::ForceWeaponEquip(AWeapon* weaponActor)
+{
+	if (weaponActor != nullptr && weaponActor->IsValidLowLevel())
+	{
+		this->WeaponPickup(weaponActor);
 	}
 }
 
@@ -262,26 +306,20 @@ void AWhiteNoiseCharacter::Input_Pickup()
 * @Param AWeapon* weaponActor - weapon actor to pickup
 * Picks up a given weaponActor, drops equipped weapon first
 */
-bool AWhiteNoiseCharacter::WeaponPickup(AWeapon* weaponActor)
+void AWhiteNoiseCharacter::WeaponPickup(AWeapon* weaponActor)
 {
-	if (this->GetCurrentWeapon() != nullptr)
+	if (this->CurrentWeapon != nullptr)
 	{
 		this->WeaponDrop();
 	}
+	
+	/* change weapon actor state to eqipped, and pickup */
+	weaponActor->ChangeState(EWeaponState::WS_EQUIP);
+	this->CurrentWeapon = weaponActor;
+	weaponActor->AttachToComponent(this->WeaponGripPoint, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
-	if (this->GetCurrentWeapon() == nullptr) //better safe than sorry
-	{
-		/* change weapon actor state to eqipped, and pickup */
-		weaponActor->ChangeState(EWeaponState::WS_EQUIP);
-		this->SetCurrentWeapon(weaponActor);
-		weaponActor->AttachToComponent(this->WeaponGripPoint, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-
-		/* Set player animation to weapon type animation (e.g. rifle, 2 handed, ...) */
-		this->SetCurrentAnimation(weaponActor->GetTargetAnimation());
-		return true;
-	}
-
-	return false;
+	/* Set player animation to weapon type animation (e.g. rifle, 2 handed, ...) */
+	this->CurrentAnimation = weaponActor->GetTargetAnimation();
 }
 
 /* ------------------------------------------
@@ -290,17 +328,17 @@ bool AWhiteNoiseCharacter::WeaponPickup(AWeapon* weaponActor)
 */
 void AWhiteNoiseCharacter::WeaponDrop()
 {
-	if (this->GetCurrentWeapon() != nullptr && this->GetCurrentWeapon()->IsValidLowLevel())
+	if (this->CurrentWeapon != nullptr && this->CurrentWeapon->IsValidLowLevel())
 	{
 		/* Detach weapon actor from character, place to throw / drop location, change weapon state to world */
-		this->GetCurrentWeapon()->DetachRootComponentFromParent(true);
+		this->CurrentWeapon->DetachRootComponentFromParent(true);
 		FVector newLocation = this->WeaponThrowArm->GetSocketLocation(USpringArmComponent::SocketName);
-		this->GetCurrentWeapon()->SetActorLocation(newLocation);
-		this->GetCurrentWeapon()->ChangeState(EWeaponState::WS_WORLD);
+		this->CurrentWeapon->SetActorLocation(newLocation);
+		this->CurrentWeapon->ChangeState(EWeaponState::WS_WORLD);
 		
 		/* no weapon equipped, set character animation back to normal */
-		this->SetCurrentWeapon(nullptr);
-		this->SetCurrentAnimation(ETargetAnimation::TA_NORMAL);
+		this->CurrentWeapon = nullptr;
+		this->CurrentAnimation = ETargetAnimation::TA_NORMAL;
 	}
 }
 
@@ -310,16 +348,16 @@ void AWhiteNoiseCharacter::WeaponDrop()
 */
 void AWhiteNoiseCharacter::WeaponThrow()
 {
-	if (this->GetCurrentWeapon() != nullptr && this->GetCurrentWeapon()->IsValidLowLevel() && !this->GetCameraFreeMove())
+	if (this->CurrentWeapon != nullptr && this->CurrentWeapon->IsValidLowLevel() && !this->bIsCameraFreeMovement)
 	{
 		/* drop the weapon */
-		AWeapon* weaponActor = this->GetCurrentWeapon();
+		AWeapon* weaponActor = this->CurrentWeapon;
 		this->WeaponDrop();
 
 		/* change state to thrown and apply force */
 		const float throwForce = 100000.0f; //todo: calculate the force
 		weaponActor->ChangeState(EWeaponState::WS_THROWN);
-		weaponActor->WeaponMesh->AddImpulseAtLocation((this->GetUpperBodyRotation().Vector() * throwForce), weaponActor->GetActorLocation());
+		weaponActor->WeaponMesh->AddImpulseAtLocation((this->UpperBodyRotation.Vector() * throwForce), weaponActor->GetActorLocation());
 	}
 }
 
@@ -329,19 +367,19 @@ void AWhiteNoiseCharacter::WeaponThrow()
 */
 void AWhiteNoiseCharacter::WeaponFire_Execute()
 {
-	if (this->GetCurrentWeapon() != nullptr && this->GetCurrentWeapon()->IsValidLowLevel() && !this->GetCameraFreeMove())
+	if (this->CurrentWeapon != nullptr && this->CurrentWeapon->IsValidLowLevel() && !this->bIsCameraFreeMovement)
 	{
 		/* not locked on an enemy, use the cursor position as target position */
-		if (this->GetLockedEnemy() == nullptr)
+		if (this->LockedEnemy == nullptr)
 		{
-			this->GetCurrentWeapon()->Fire(this->GetMouseCursorPosition());
+			this->CurrentWeapon->Fire(this->GetMouseCursorPosition());
 		}
 		else
 		{
 			/* locked on an enemy, use the enemy position as target position */
-			if (this->GetLockedEnemy()->IsValidLowLevel())
+			if (this->LockedEnemy->IsValidLowLevel())
 			{
-				this->GetCurrentWeapon()->Fire(this->GetLockedEnemy()->GetActorLocation());
+				this->CurrentWeapon->Fire(this->LockedEnemy->GetActorLocation());
 			}
 		}
 	}
@@ -351,19 +389,19 @@ void AWhiteNoiseCharacter::WeaponFire_Execute()
 * WeaponFire()
 * Handles the fire of a weapon, based on the weapon type. Enables automatic shooting on automatic weapon
 */
-void AWhiteNoiseCharacter::WeaponFire()
+void AWhiteNoiseCharacter::WeaponFire_Start()
 {
-	if (this->GetCurrentWeapon() != nullptr && this->GetCurrentWeapon()->IsValidLowLevel() && !this->GetCameraFreeMove())
+	if (this->CurrentWeapon != nullptr && this->CurrentWeapon->IsValidLowLevel() && !this->bIsCameraFreeMovement)
 	{
 		/* single shot weapon, execute one shot directly */
-		if (this->GetCurrentWeapon()->WeaponType == EWeaponType::WT_SINGLE)
+		if (this->CurrentWeapon->GetWeaponType() == EWeaponType::WT_SINGLE)
 		{
 			this->WeaponFire_Execute();
 		}
-		else if (this->GetCurrentWeapon()->WeaponType == EWeaponType::WT_AUTOMATIC)
+		else if (this->CurrentWeapon->GetWeaponType() == EWeaponType::WT_AUTOMATIC)
 		{
 			/* automatic shooting weapon, enable to shoot over time (handled by tick) */
-			this->SetIsFiring(true);
+			this->bIsFiring = true;
 		}
 	}
 }
@@ -374,85 +412,5 @@ void AWhiteNoiseCharacter::WeaponFire()
 */
 void AWhiteNoiseCharacter::WeaponFire_Stop()
 {
-	this->SetIsFiring(false);
-}
-
-ANPC* AWhiteNoiseCharacter::GetLockedEnemy() const
-{
-	return this->LockedEnemy;
-}
-
-void AWhiteNoiseCharacter::SetLockedEnemy(ANPC* LockedEnemy)
-{
-	this->LockedEnemy = LockedEnemy;
-}
-
-AWeapon* AWhiteNoiseCharacter::GetCurrentWeapon() const
-{
-	return this->CurrentWeapon; 
-}
-
-float AWhiteNoiseCharacter::GetPickupDistance() const
-{
-	return this->WeaponPickupDistance;
-}
-
-bool AWhiteNoiseCharacter::GetIsFiring() const
-{
-	return this->bIsFiring; 
-}
-
-void AWhiteNoiseCharacter::SetCurrentWeapon(const AWeapon* CurrentWeapon)
-{
-	this->CurrentWeapon = CurrentWeapon;
-}
-
-void AWhiteNoiseCharacter::SetPickupDistance(const float WeaponPickupDistance)
-{
-	this->WeaponPickupDistance = WeaponPickupDistance;
-}
-
-void AWhiteNoiseCharacter::SetIsFiring(const bool bIsFiring)
-{
-	this->bIsFiring = bIsFiring;
-}
-
-float AWhiteNoiseCharacter::GetCameraFreeDistance() const
-{
-	return MaxFreeCamDistance;
-}
-
-bool AWhiteNoiseCharacter::GetCameraFreeMove() const 
-{
-	return bIsCameraFreeMovement;
-}
-
-void AWhiteNoiseCharacter::SetCameraFreeDistance(const float MaxFreeCamDistance)
-{
-	this->MaxFreeCamDistance = MaxFreeCamDistance;
-}
-
-void AWhiteNoiseCharacter::SetCameraFreeMove(const bool bIsCameraFreeMovement)
-{
-	this->bIsCameraFreeMovement = bIsCameraFreeMovement;
-}
-
-ETargetAnimation AWhiteNoiseCharacter::GetCurrentAnimation() const
-{
-	return CurrentAnimation; 
-}
-
-void AWhiteNoiseCharacter::SetCurrentAnimation(const ETargetAnimation CurrentAnimation)
-{
-	this->CurrentAnimation = CurrentAnimation;
-}
-
-FRotator AWhiteNoiseCharacter::GetUpperBodyRotation() const 
-{ 
-	return UpperBodyRotation; 
-}
-
-void AWhiteNoiseCharacter::SetUpperBodyRotation(const FRotator UpperBodyRotation)
-{
-	this->UpperBodyRotation = UpperBodyRotation;
+	this->bIsFiring = false;
 }

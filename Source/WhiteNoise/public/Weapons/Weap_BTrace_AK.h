@@ -1,8 +1,8 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 #pragma once
 
-#include "Weapons/BulletTrace.h"
-#include "Rifle_AK.generated.h"
+#include "Weap_BTrace.h"
+#include "Weap_BTrace_AK.generated.h"
 
 /**
  * 

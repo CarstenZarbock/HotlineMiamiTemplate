@@ -1,6 +1,6 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 #include "WhiteNoise.h"
-#include "Shotgun.h"
+#include "Weap_BTrace_Shotgun.h"
 
 AShotgun::AShotgun()
 {

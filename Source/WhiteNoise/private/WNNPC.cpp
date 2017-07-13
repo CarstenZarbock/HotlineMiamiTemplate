@@ -1,38 +1,45 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 #include "WhiteNoise.h"
-#include "NPC.h"
-#include "WhiteNoiseCharacter.h"
+#include "WNNPC.h"
+#include "WNCharacter.h"
+#include "WNGameMode.h"
 
-// Sets default values
 ANPC::ANPC()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	//this->GetMesh()->OnComponentHit.AddDynamic(this, &AEnemy::OnHit);
+	
 	this->GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ANPC::OnHit);
 }
 
-// Called when the game starts or when spawned
 void ANPC::BeginPlay()
 {
 	Super::BeginPlay();
 
+	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
+	if (GMBase != nullptr)
+	{
+		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
+		if (GMWNBase != nullptr)
+		{
+			GMWNBase->Register(this, this->bIsGarbage);
+		}
+	}
+
 	/* Set Stats */
-	this->GetStats()->SetIsAlive(true);
-	this->GetStats()->SetHealh(this->GetMaxHealth());
-	this->GetStats()->SetIsCrawling(false);
+	this->bIsAlive = true;
+	this->Health = this->MaxHealth;
+	this->bIsCrawling = false;
 	
 	this->ChangeMovementState(EEnemyMovementState::EMS_WALK);
 }
 
-// Called every frame
 void ANPC::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
 	this->HandleAI();
 }
 
-bool ANPC::PlayerInSight()
+const bool ANPC::PlayerInSight()
 {
 	//todo: Multiplayer
 	AWhiteNoiseCharacter* PlayerCharacter = Cast<AWhiteNoiseCharacter>(GetWorld()->GetFirstPlayerController()->GetPawn());
@@ -71,11 +78,22 @@ void ANPC::ChangeState(ETargetEnemyState ENewState)
 	switch (ENewState)
 	{
 	case ETargetEnemyState::TES_CRAWL:
-		this->GetStats()->SetIsCrawling(true);
+		this->bIsCrawling = true;
 		this->ChangeMovementState(EEnemyMovementState::EMS_CRAWL);
 		break;
 	case ETargetEnemyState::TES_DEAD:
-		this->GetStats()->SetIsAlive(false);
+		this->bIsAlive = false;
+
+		AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
+		if (GMBase != nullptr)
+		{
+			AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
+			if (GMWNBase != nullptr)
+			{
+				GMWNBase->RemoveAliveNPC(this);
+			}
+		}
+
 		break;
 	}
 }
@@ -85,13 +103,13 @@ void ANPC::ChangeMovementState(EEnemyMovementState ENewState)
 	switch (ENewState)
 	{
 	case EEnemyMovementState::EMS_WALK:
-		this->GetCharacterMovement()->MaxWalkSpeed = this->GetMovement()->GetWalkSpeed();
+		this->GetCharacterMovement()->MaxWalkSpeed = this->fWalking;
 		break;
 	case EEnemyMovementState::EMS_RUN:
-		this->GetCharacterMovement()->MaxWalkSpeed = this->GetMovement()->GetRunSpeed();
+		this->GetCharacterMovement()->MaxWalkSpeed = this->fRunning;
 		break;
 	case EEnemyMovementState::EMS_CRAWL:
-		this->GetCharacterMovement()->MaxWalkSpeed = this->GetMovement()->GetCrawlSpeed();
+		this->GetCharacterMovement()->MaxWalkSpeed = this->fCrawling;
 		break;
 	default:
 		break;
@@ -125,18 +143,13 @@ bool ANPC::WalkToLocation(FVector vecDestinationLocation)
 	if (NavSys != nullptr)
 	{
 		NavSys->SimpleMoveToLocation(this->GetController(), vecDestinationLocation);
+		GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, FString::FromInt(vecDestinationLocation.X) + " " + FString::FromInt(vecDestinationLocation.Y) + " " + FString::FromInt(vecDestinationLocation.Z));
 		return true;
 	}
 
 	return false;
 }
-/* ------------------------------------------
-* TraceLine
-* @Param FVector Start - Start position world space
-* @Param FVector End - End position world space
-* @Param bool Debug - Draw Debug Lines
-* Casts a trace line, returns hitresult
-*/
+
 FHitResult ANPC::TraceLine(FVector Start, FVector End, bool Debug)
 {
 	//todo: rework function

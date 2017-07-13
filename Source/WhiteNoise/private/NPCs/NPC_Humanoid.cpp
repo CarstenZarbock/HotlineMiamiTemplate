@@ -1,7 +1,7 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 
 #include "WhiteNoise.h"
-#include "Humanoid.h"
+#include "NPC_Humanoid.h"
 
 AHumanoid::AHumanoid()
 {
@@ -19,9 +19,9 @@ AHumanoid::AHumanoid()
 	MeshLegRight->SetupAttachment(this->GetMesh());
 
 	MeshTorso->SetMasterPoseComponent(this->GetMesh());
-	MeshArmLeft->SetMasterPoseComponent(this->GetMesh());
-	MeshArmRight->SetMasterPoseComponent(this->GetMesh());
-	MeshHead->SetMasterPoseComponent(this->GetMesh());
+	MeshArmLeft->SetMasterPoseComponent(this->MeshTorso);
+	MeshArmRight->SetMasterPoseComponent(this->MeshTorso);
+	MeshHead->SetMasterPoseComponent(this->MeshTorso);
 	MeshLegLeft->SetMasterPoseComponent(this->GetMesh());
 	MeshLegRight->SetMasterPoseComponent(this->GetMesh());
 
@@ -88,19 +88,19 @@ void AHumanoid::HandleAI()
 
 void AHumanoid::HandleCrawl()
 {
-	if (!this->GetCrawlState()->GetIsMovingToPoint())
+	if (!this->bIsMovingToPoint)
 	{
 		/* He's not crawling to a target point */
-		FVector vecDestination = this->GetRandomWalkpoint(false, 5000.0f); //todo fix range;
-		this->GetCrawlState()->SetTargetPoint(vecDestination);
-		this->GetCrawlState()->SetIsMovingToPoint(this->WalkToLocation(vecDestination));
+		FVector vecDestination = this->GetRandomWalkpoint(true, 1000.0f); //todo fix range;
+		this->bIsMovingToPoint = this->WalkToLocation(vecDestination);
+		this->vecTargetPoint = vecDestination;
 	}
 	else
 	{
 		/* we're crawling to a position, check if we reached, set to false */
-		if (FVector::Dist(this->GetActorLocation(), this->GetCrawlState()->GetTargetPoint()) < 300.0f) //todo: Reach Distance
+		if (FVector::Dist(this->GetActorLocation(), this->vecTargetPoint) < 300.0f) //todo: Reach Distance
 		{
-			this->GetCrawlState()->SetIsMovingToPoint(false);
+			this->bIsMovingToPoint = false;
 		}
 	}
 }
@@ -113,13 +113,22 @@ void AHumanoid::SpawnStartWeapon()
 		SpawnTransform.SetScale3D(FVector(1.0f, 1.0f, 1.0f));
 		SpawnTransform.SetLocation(this->GetActorLocation());
 		SpawnTransform.SetRotation(this->GetActorRotation().Quaternion());
-		AWeapon* SpawnedActor = Cast<AWeapon>(GetWorld()->SpawnActor(this->AStarterWeapon));
+		//AWeapon* SpawnedActor = Cast<AWeapon>(GetWorld()->SpawnActor(this->AStarterWeapon));
+		
+		AActor* NewActor = GetWorld()->SpawnActorDeferred<AActor>(this->AStarterWeapon, SpawnTransform);
+		AWeapon* NewWeapon = Cast<AWeapon>(NewActor);
 
-		if (SpawnedActor != nullptr)
+		if (NewWeapon != nullptr)
 		{
-			SpawnedActor->SetActorLocation(this->GetActorLocation());
-			this->Weapon_Pickup(SpawnedActor);
+			NewWeapon->MarkAsGarbage();
+
+			NewWeapon->FinishSpawning(SpawnTransform);
+			NewWeapon->SetActorLocation(this->GetActorLocation());
+			this->Weapon_Pickup(NewWeapon);
 		}
+
+		//Deferred ignores the BP Constructor, be sure to apply the BP Class transform				
+		//NewActor->SetActorTransform(SpawnTransform, false, nullptr, ETeleportType::TeleportPhysics);
 	}
 }
 
@@ -156,12 +165,12 @@ bool AHumanoid::Weapon_Pickup(AWeapon* TargetWeaponActor)
 
 void AHumanoid::DamageApply(int iDamageAmount, FVector vecDirection)
 {
-	if (this->GetStats()->GetIsAlive())
+	if (this->bIsAlive)
 	{
 		if (iDamageAmount <= 50)
 		{
 			/* set crawling */
-			this->GetStats()->SetHealh(this->GetStats()->GetHealth() - iDamageAmount);
+			this->Health -= iDamageAmount;
 			this->ChangeState(ETargetEnemyState::TES_CRAWL);
 			if (this->GetWeapon() != nullptr && this->GetWeapon()->IsValidLowLevel())
 			{
@@ -191,7 +200,7 @@ void AHumanoid::DamageApply(int iDamageAmount, FVector vecDirection)
 	}
 }
 
-void AHumanoid::CutLimb(USkeletalMeshComponent* LimbMesh)
+void AHumanoid::CutLimb(USkeletalMeshComponent* LimbMesh, const bool bHardCut)
 {
 	if (LimbMesh != nullptr && LimbMesh->IsValidLowLevel())
 	{
@@ -202,11 +211,16 @@ void AHumanoid::CutLimb(USkeletalMeshComponent* LimbMesh)
 		ColContainer.PhysicsBody = 0;
 
 		LimbMesh->SetMasterPoseComponent(nullptr);
-		LimbMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-		LimbMesh->SetCollisionObjectType(ECC_PhysicsBody);
-		LimbMesh->SetSimulatePhysics(true);
 		LimbMesh->SetCollisionResponseToChannels(ColContainer);
 		LimbMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		LimbMesh->SetCollisionObjectType(ECC_PhysicsBody);
+		LimbMesh->SetSimulatePhysics(true);
+	
+		/* Todo: Soft Cut is not working right now. Attach single sockets to fix? */
+		//if (bHardCut)
+		//{
+			LimbMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		//}
 	}
 }
 
@@ -251,31 +265,31 @@ void AHumanoid::ExecuteDeathFullsplat(FVector vecDirection)
 {
 	this->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	this->CutLimb(MeshHead);
+	this->CutLimb(MeshHead, false);
 	MeshHead->AddImpulseAtLocation(vecDirection, MeshHead->GetComponentLocation());
 	this->ActivateGoreParticles(ECharacterLimbs::LIMB_HEAD);
 
-	this->CutLimb(MeshArmLeft);
+	this->CutLimb(MeshArmLeft, false);
 	MeshArmLeft->AddImpulseAtLocation(vecDirection, MeshArmLeft->GetComponentLocation());
 	this->ActivateGoreParticles(ECharacterLimbs::LIMB_ARMLEFT);
 
-	this->CutLimb(MeshArmRight);
+	this->CutLimb(MeshArmRight, false);
 	MeshArmRight->AddImpulseAtLocation(vecDirection, MeshArmRight->GetComponentLocation());
 	this->ActivateGoreParticles(ECharacterLimbs::LIMB_ARMRIGHT);
 
-	this->CutLimb(MeshTorso);
+	this->CutLimb(MeshTorso, true);
 	MeshTorso->AddImpulseAtLocation(vecDirection, MeshTorso->GetComponentLocation());
 	this->ActivateGoreParticles(ECharacterLimbs::LIMB_TORSO);
 
-	this->CutLimb(MeshLegLeft);
+	this->CutLimb(MeshLegLeft, false);
 	MeshLegLeft->AddImpulseAtLocation(vecDirection, MeshLegLeft->GetComponentLocation());
 	this->ActivateGoreParticles(ECharacterLimbs::LIMB_LEGLEFT);
 
-	this->CutLimb(MeshLegRight);
+	this->CutLimb(MeshLegRight, false);
 	MeshLegRight->AddImpulseAtLocation(vecDirection, MeshLegRight->GetComponentLocation());
 	this->ActivateGoreParticles(ECharacterLimbs::LIMB_LEGRIGHT);
 
-	this->CutLimb(this->GetMesh()); //Lower Torso
+	this->CutLimb(this->GetMesh(), true); //Lower Torso
 	this->GetMesh()->AddImpulseAtLocation(vecDirection, this->GetMesh()->GetComponentLocation());
 	this->ActivateGoreParticles(ECharacterLimbs::LIMB_BOTTOM);
 }
@@ -286,21 +300,21 @@ void AHumanoid::ExecuteDeathAnimation(FVector vecDirection)
 
 	if (FMath::RandBool())
 	{
-		this->CutLimb(MeshHead);
+		this->CutLimb(MeshHead, true);
 		MeshHead->AddImpulseAtLocation(vecDirection, MeshHead->GetComponentLocation());
 		this->ActivateGoreParticles(ECharacterLimbs::LIMB_HEAD);
 	}
 
 	if (FMath::RandBool())
 	{
-		this->CutLimb(MeshArmLeft);
+		this->CutLimb(MeshArmLeft, true);
 		MeshArmLeft->AddImpulseAtLocation(vecDirection, MeshArmLeft->GetComponentLocation());
 		this->ActivateGoreParticles(ECharacterLimbs::LIMB_ARMLEFT);
 	}
 
 	if (FMath::RandBool())
 	{
-		this->CutLimb(MeshArmRight);
+		this->CutLimb(MeshArmRight, true);
 		MeshArmRight->AddImpulseAtLocation(vecDirection, MeshArmRight->GetComponentLocation());
 		this->ActivateGoreParticles(ECharacterLimbs::LIMB_ARMRIGHT);
 	}

@@ -1,8 +1,8 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 #pragma once
 #include "GameFramework/PlayerController.h"
-#include "WhiteNoiseCharacter.h"
-#include "WhiteNoisePlayerController.generated.h"
+#include "WNCharacter.h"
+#include "WNPlayerController.generated.h"
 
 UCLASS()
 class AWhiteNoisePlayerController : public APlayerController
@@ -34,11 +34,11 @@ protected:
 	void CameraToggle();
 	void StopCameraToggle();
 
-	bool SetCameraFreeMovement(bool bNewCameraFreeMovement) { bCameraFreeMovement = bNewCameraFreeMovement; return bCameraFreeMovement; }
-	bool GetCameraFreeMovement() { return bCameraFreeMovement; }
 	void CameraFreeMoveHandle(float DeltaSeconds);
 
 	void LockEnemy();
+
+	void RestartStage();
 };
 
 

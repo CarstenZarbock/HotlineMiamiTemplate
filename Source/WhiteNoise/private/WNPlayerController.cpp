@@ -1,8 +1,9 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 
 #include "WhiteNoise.h"
-#include "WhiteNoisePlayerController.h"
-#include "NPC.h"
+#include "WNPlayerController.h"
+#include "WNNPC.h"
+#include "WNGameMode.h"
 
 AWhiteNoisePlayerController::AWhiteNoisePlayerController()
 {
@@ -13,7 +14,8 @@ void AWhiteNoisePlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 	this->RotatePlayerToMouse();
-	if (this->GetCameraFreeMovement())
+
+	if (this->bCameraFreeMovement)
 	{
 		this->CameraFreeMoveHandle(DeltaTime);
 	}
@@ -31,6 +33,7 @@ void AWhiteNoisePlayerController::SetupInputComponent()
 	InputComponent->BindAction("CameraToggle", EInputEvent::IE_Pressed, this, &AWhiteNoisePlayerController::CameraToggle);
 	InputComponent->BindAction("CameraToggle", EInputEvent::IE_Released, this, &AWhiteNoisePlayerController::StopCameraToggle);
 	InputComponent->BindAction("LockOn", EInputEvent::IE_Pressed, this, &AWhiteNoisePlayerController::LockEnemy);
+	InputComponent->BindAction("Restart", EInputEvent::IE_Released, this, &AWhiteNoisePlayerController::RestartStage);
 }
 
 void AWhiteNoisePlayerController::SetPawn(APawn* InPawn)
@@ -52,42 +55,28 @@ void AWhiteNoisePlayerController::CameraFreeMoveHandle(float DeltaSeconds)
 	float fMoveX = (ViewportSize.X / 100.0f) * fMovePercentage;
 	float fMoveY = (ViewportSize.Y / 100.0f) * fMovePercentage;
 
-	FString Message;
-	Message.Append(FString::FromInt(fLocX));
-	Message.Append(":");
-	Message.Append(FString::FromInt(fMoveX));
-	Message.Append(":");
-	Message.Append(FString::FromInt(ViewportSize.X));
-
-	GEngine->AddOnScreenDebugMessage(3, 10.0f, FColor::Cyan, Message);
-
-
 	if (PlayerPawn != nullptr)
 	{
 		if (fLocX <= fMoveX)
 		{
 			//**** left
-			const FVector vecWorldDirection = { 0, 1, 0 };
-			PlayerPawn->CameraFreeMove(vecWorldDirection, fMoveSpeed * -1);
+			PlayerPawn->CameraFreeMove(FVector(0, 1, 0), fMoveSpeed * -1);
 		}
 		else if (fLocX >= ViewportSize.X - fMoveX)
 		{
 			//**** right
-			const FVector vecWorldDirection = { 0, 1, 0 };
-			PlayerPawn->CameraFreeMove(vecWorldDirection, fMoveSpeed);
+			PlayerPawn->CameraFreeMove(FVector(0, 1, 0), fMoveSpeed);
 		}
 
 		if (fLocY <= fMoveY)
 		{
 			//**** up
-			const FVector vecWorldDirection = { 0, 0, 1 };
-			PlayerPawn->CameraFreeMove(vecWorldDirection, fMoveSpeed);
+			PlayerPawn->CameraFreeMove(FVector(0, 0, 1), fMoveSpeed);
 		}
 		else if (fLocY >= ViewportSize.Y - fMoveY)
 		{
 			//**** down
-			const FVector vecWorldDirection = { 0, 0, 1 };
-			PlayerPawn->CameraFreeMove(vecWorldDirection, fMoveSpeed * -1);
+			PlayerPawn->CameraFreeMove(FVector(0, 0, 1), fMoveSpeed * -1);
 		}
 	}
 
@@ -97,30 +86,25 @@ void AWhiteNoisePlayerController::RotatePlayerToMouse()
 {
 	if (PlayerPawn != nullptr)
 	{
-		if (PlayerPawn->GetLockedEnemy() == nullptr)
-		{
-			PlayerPawn->HandleRotation(this->GetMouseCursorPosition());
-		}
+		PlayerPawn->ManualRotation(this->GetMouseCursorPosition());
 	}
 }
 
 void AWhiteNoisePlayerController::MoveForward(float fRate)
 {
 	/* Add Movement to the direction */
-	if (PlayerPawn != nullptr && !this->GetCameraFreeMovement())
+	if (PlayerPawn != nullptr && !this->bCameraFreeMovement)
 	{
-		FVector vecWorldDirection = { 1, 0, 0 };
-		PlayerPawn->HandleMovement(vecWorldDirection, fRate);
+		PlayerPawn->HandleMovement(FVector(1, 0, 0), fRate);
 	}
 }
 
 void AWhiteNoisePlayerController::MoveSideward(float fRate)
 {
 	/* Add Movement to the direction */
-	if (PlayerPawn != nullptr && !this->GetCameraFreeMovement())
+	if (PlayerPawn != nullptr && !this->bCameraFreeMovement)
 	{
-		FVector vecWorldDirection = { 0, 1, 0 };
-		PlayerPawn->HandleMovement(vecWorldDirection, fRate);
+		PlayerPawn->HandleMovement(FVector(0, 1, 0), fRate);
 	}
 }
 
@@ -140,7 +124,7 @@ FVector AWhiteNoisePlayerController::GetMouseCursorPosition()
 
 void AWhiteNoisePlayerController::PickupObject()
 {
-	if (PlayerPawn != nullptr && !this->GetCameraFreeMovement())
+	if (PlayerPawn != nullptr && !this->bCameraFreeMovement)
 	{
 		PlayerPawn->Input_Pickup();
 	}
@@ -150,7 +134,7 @@ void AWhiteNoisePlayerController::Fire()
 {
 	if (PlayerPawn != nullptr)
 	{
-		PlayerPawn->WeaponFire();
+		PlayerPawn->WeaponFire_Start();
 	}
 }
 
@@ -166,7 +150,7 @@ void AWhiteNoisePlayerController::Throw()
 {
 	if (PlayerPawn != nullptr)
 	{
-		if (!this->GetCameraFreeMovement())
+		if (!this->bCameraFreeMovement)
 		{
 			PlayerPawn->WeaponThrow();
 		}
@@ -194,19 +178,30 @@ void AWhiteNoisePlayerController::LockEnemy()
 
 void AWhiteNoisePlayerController::CameraToggle()
 {
-	this->SetCameraFreeMovement(true);
 	if (PlayerPawn != nullptr)
 	{
-		PlayerPawn->SetCameraFreeMove(true);
+		this->bCameraFreeMovement = PlayerPawn->CameraFreeMoveToggle(true);
 	}
 }
 
 void AWhiteNoisePlayerController::StopCameraToggle()
 {
-	this->SetCameraFreeMovement(false);
 	if (PlayerPawn != nullptr)
 	{
-		PlayerPawn->SetCameraFreeMove(false);
-		PlayerPawn->ResetFreeCam();
+		this->bCameraFreeMovement = PlayerPawn->CameraFreeMoveToggle(false);
 	}
+}
+
+void AWhiteNoisePlayerController::RestartStage()
+{
+	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
+	if (GMBase != nullptr)
+	{
+		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
+		if (GMWNBase != nullptr)
+		{
+			GMWNBase->RestartStage();
+		}
+	}
+
 }

@@ -1,6 +1,6 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 #include "WhiteNoise.h"
-#include "Rifle_AK.h"
+#include "Weap_BTrace_AK.h"
 
 ARifle_AK::ARifle_AK()
 {

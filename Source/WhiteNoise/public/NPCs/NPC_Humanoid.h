@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "NPC.h"
-#include "Weapon.h"
-#include "Humanoid.generated.h"
+#include "WNNPC.h"
+#include "WNWeapon.h"
+#include "NPC_Humanoid.generated.h"
 
 UENUM(BlueprintType)
 enum class ECharacterLimbs : uint8
@@ -71,7 +71,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
 		ETargetAnimation ECurrentAnimation;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite, Category = "AI")
 		TSubclassOf<AWeapon> AStarterWeapon;
 
 private:
@@ -80,7 +80,7 @@ private:
 	void ActivateGoreParticles(ECharacterLimbs ECutLimb);
 	void ExecuteDeathFullsplat(FVector vecDirection);
 	void ExecuteDeathAnimation(FVector vecDirection);
-	void CutLimb(USkeletalMeshComponent* LimbMesh);
+	void CutLimb(USkeletalMeshComponent* LimbMesh, const bool bHardCut);
 
 public:
 

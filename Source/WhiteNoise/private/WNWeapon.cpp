@@ -1,8 +1,9 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 #include "WhiteNoise.h"
-#include "Weapon.h"
-#include "NPC.h"
-#include "WhiteNoiseCharacter.h"
+#include "WNWeapon.h"
+#include "WNNPC.h"
+#include "WNCharacter.h"
+#include "WNGameMode.h"
 
 // Sets default values
 AWeapon::AWeapon()
@@ -16,23 +17,25 @@ AWeapon::AWeapon()
 
 	WeaponShotPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ShotPoint"));
 	WeaponShotPoint->SetupAttachment(RootComponent);
-	this->ChangeState(EWeaponState::WS_WORLD);
 }
 
 // Called when the game starts or when spawned
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-	CurAmmo = MaxAmmo;
+	this->CurAmmo = this->MaxAmmo;
 
-	if (this->bIsPickupOnStart)
+	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
+	if (GMBase != nullptr)
 	{
-		AWhiteNoiseCharacter* PlayerChar = Cast<AWhiteNoiseCharacter>(GetWorld()->GetFirstPlayerController()->GetPawn());
-		if (PlayerChar != nullptr && PlayerChar->IsValidLowLevel())
+		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
+		if (GMWNBase != nullptr)
 		{
-			PlayerChar->WeaponPickup(this);
+			GMWNBase->Register(this, this->bIsGarbage);
 		}
 	}
+
+	//this->ChangeState(EWeaponState::WS_WORLD);
 }
 
 // Called every frame
@@ -41,11 +44,9 @@ void AWeapon::Tick( float DeltaTime )
 	Super::Tick( DeltaTime );
 	this->CustomTick(DeltaTime);
 
-	
-
 	if (this->GetState() == EWeaponState::WS_THROWN)
 	{
-		if (GetGameTimeSinceCreation() > fThrowTime + 0.5f)
+		if (GetGameTimeSinceCreation() > this->fThrowTime + 0.5f)
 		{
 			if (this->GetVelocity().Size() < 50.0f)
 			{
@@ -56,7 +57,7 @@ void AWeapon::Tick( float DeltaTime )
 
 	if (this->bIsShotPause)
 	{
-		this->fShotPauseTimer += fShotrate * DeltaTime;
+		this->fShotPauseTimer += this->fShotrate * DeltaTime;
 		if (this->fShotPauseTimer >= this->fShotPause)
 		{
 			this->bIsShotPause = false;
@@ -74,9 +75,9 @@ void AWeapon::ChangeState(EWeaponState ENewState)
 {
 	FCollisionResponseContainer ColContainer;
 	//0 None, 1 Overlap, 2 Block
+	this->EState = ENewState;
 
-	this->SetState(ENewState);
-	switch (ENewState)
+	switch (this->EState)
 	{
 	case EWeaponState::WS_WORLD:
 		this->WeaponMesh->SetCustomDepthStencilValue(1);

@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "Weapons/Melee.h"
-#include "Baseballbat.generated.h"
+#include "Weapons/Weap_Melee.h"
+#include "Weap_Melee_BaseballBat.generated.h"
 
 /**
  * 

@@ -1,7 +1,7 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 #include "WhiteNoise.h"
-#include "BulletTrace.h"
-#include "NPC.h"
+#include "Weap_BTrace.h"
+#include "WNNPC.h"
 
 ABulletTrace::ABulletTrace()
 {
@@ -62,7 +62,7 @@ void ABulletTrace::Fire(FVector vecTargetLocation)
 						vecDirection = FVector(vecDirection.X, vecDirection.Y, 0);
 						vecDirection *= -1;
 
-						EnemyActor->DamageApply(iDamage, vecDirection * 100);
+						EnemyActor->DamageApply(iDamage, vecDirection * 10);
 
 					}
 				}
