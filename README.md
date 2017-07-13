@@ -1,10 +1,19 @@
 # README #
 ---
-WhiteNoise: A 2.5D topdown shooter prototype
+Hotline Miami Template: A 2.5D topdown shooter template
 
-Heavily inspired by the famous game hotline miami.
+Inspired by the famous game hotline miami.
+Currently includes
+- Instant death / respawn
+- Instant stage ("floor") reset & clean up
+- Custom triggers for stage goals and stage switches
+- Basic NPC / AI
+- Basic weapon templates / classes (currently only raycast weapons, var. projectile & meele will follow)
+- Physic doors (very important.)
 
-
-For visual updates take a look at
+For visual updates take a look at my YouTube Channel
+(ignore the non-related videos)
 
 https://www.youtube.com/channel/UCPzO2aSD1EmtabGRs8NSfew
+
+Orientating on MS C++ Code Guideline
