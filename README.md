@@ -1,6 +1,7 @@
 # README #
 ---
 Hotline Miami Template: A 2.5D topdown shooter template for the Unreal Engine 4
+
 (C++, BP childclasses to set up components / properties)
 
 Inspired by the famous game Hotline Miami.
@@ -22,4 +23,4 @@ Orientating on MS C++ Code Guideline.
 
 
 Please contact me for LFS access.
-Includes set up BP childclasses, meshes / animations, placeholder maps with set up floors / triggers / NPCs, excludes environment meshes because of copyright reasons.
+Includes set up BP childclasses, meshes / animations, placeholder maps with set up floors / triggers / NPCs, excludes environment meshes because of copyright reasons. (Available at UE4 market, low poly env.)
