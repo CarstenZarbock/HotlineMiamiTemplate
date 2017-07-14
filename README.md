@@ -17,3 +17,6 @@ For visual updates take a look at my YouTube Channel
 https://www.youtube.com/channel/UCPzO2aSD1EmtabGRs8NSfew
 
 Orientating on MS C++ Code Guideline
+
+Please contact me for LFS access.
+Includes set up BP childclasses, meshes / animations, placeholder maps with set up floors / triggers / NPCs, excludes environment meshes because of copyright reasons.
