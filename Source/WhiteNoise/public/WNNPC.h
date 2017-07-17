@@ -4,7 +4,7 @@
 #include "GameFramework/Character.h"
 #include "WNNPC.generated.h"
 
-/* AI patroling types */
+/** AI patroling types */
 UENUM(BlueprintType)
 enum class EEnemyMovement : uint8
 {
@@ -13,7 +13,7 @@ enum class EEnemyMovement : uint8
 	EM_FIXEDPATROL	UMETA(DisplayName = "FIXEDWALK")
 };
 
-/* AI movement types */
+/** AI movement types */
 UENUM(BlueprintType)
 enum class EEnemyMovementState : uint8
 {
@@ -22,7 +22,7 @@ enum class EEnemyMovementState : uint8
 	EMS_CRAWL		UMETA(DisplayName = "CRAWLING")
 };
 
-/* AI patroling directon priority types */
+/** AI patroling directon priority types */
 UENUM(BlueprintType)
 enum class EEnemyMovementPriority : uint8
 {
@@ -31,10 +31,11 @@ enum class EEnemyMovementPriority : uint8
 	EMP_RANDOM		UMETA(DisplayName = "RANDOM")
 };
 
-/* AI state types on change */
+/** AI state types */
 UENUM(BlueprintType)
 enum class ETargetEnemyState : uint8
 {
+	TES_ALIVE		UMETA(DisplayName = "ALIVE"),
 	TES_CRAWL		UMETA(DisplayName = "CRAWLING"),
 	TES_DEAD		UMETA(DisplayName = "DEAD")
 };
@@ -44,105 +45,104 @@ class WHITENOISE_API ANPC : public ACharacter
 {
 	GENERATED_BODY()
 private:
-	/* stats max health */
-	UPROPERTY(EditAnywhere, Category = "Stats")
-	int MaxHealth;
-		
-	/* */
-	UPROPERTY(EditAnywhere, Category = "Stats")
+	/** Movement Run Speed */
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float fRunning;
 	
-	/* */
-	UPROPERTY(EditAnywhere, Category = "Stats")
+	/** Movement Walk Speed */
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float fWalking;
 	
-	/* */
-	UPROPERTY(EditAnywhere, Category = "Stats")
+	/** Movement Crawl Speed */
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float fCrawling;	
 	
-	/* */
+	/** Register as garbage actor @StageHandler*/
 	bool bIsGarbage = false;
+
+	/** Register the actor on Game Mode / StageHandler */
+	const bool RegisterOnGameMode();
+
+	/** Notify Game Mode about death of the npc */
+	const bool DeathNotifyGameMode();
 	
 protected:
-	/* Raycast wrapper, casts a traceline */
+
+	/** Raycast helper, casts a preset traceline */
 	FHitResult TraceLine(FVector Start, FVector End, bool Debug);
 
-	/* */
-	bool bIsMovingToPoint;
+	/** AI:: is actor currently moving */
+	bool bIsMovingToLocation;
 
-	/* */
-	FVector vecTargetPoint;
+	/** AI:: target location of current movement */
+	FVector TargetLocation;
 
-	/* */
-	bool bHasSeenPlayer;
-
-	/* */
-	bool bIsAlive;
-
-	/* stats current health */
-	int Health;
-
-	/* */
+	/** AI:: movement state - crawling on ground */
 	bool bIsCrawling;
 
+	/** AI:: has seen player at last check cycle */
+	bool bHasSeenPlayer;
+
+	/** Stats is NPC alive */
+	bool bIsAlive;
+
+	/** Stats current health */
+	int Health;
+
+	/** Stats maximum health */
+	UPROPERTY(EditAnywhere, Category = "Stats")
+	int MaxHealth;
+
 public:
-	/* Registers the object as a garbage object @Stage Handler*/
-	void MarkAsGarbage() { bIsGarbage = true; }
-	
-	/* Returns the alive status */
-	bool IsAlive() const { return this->bIsAlive; }
-
-	/* Changes the NPC AI state */
-	void ChangeState(ETargetEnemyState ENewState);
-	
-	/* AI Handling */
-	virtual void HandleAI();
-	
-	/* Returns a random walkpoint on map */
-	FVector GetRandomWalkpoint(bool inRange, float Range);
-	
-	/* Changes the NPC movement state */
-	void ChangeMovementState(EEnemyMovementState ENewState);
-	
-	/* Activates movement to world position */
-	bool WalkToLocation(FVector destinationWorldPosition);
-
-	/* current movement state */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-	EEnemyMovement EEnemyType;
-	
-	/* movement direction priority for random patroling*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-	EEnemyMovementPriority EMovementPriority;
-	
-	/* different movement stats (/speeds) */
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	//FMovementStats MovementStats;
-
-	/* Death animation 1 - change to TArray*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
-	UAnimationAsset* DeathAnimation_1;
-
-	/* Constructor */
+	/** Constructor */
 	ANPC();
 
-	/* Begin Play */
+	/** Begin Play */
 	virtual void BeginPlay() override;
-	
-	/* Tick */
-	virtual void Tick( float DeltaSeconds ) override;
 
-	/* on physical hit */
+	/** Tick */
+	virtual void Tick(float DeltaSeconds) override;
+
+	/** Called on physical hit */
 	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
+		void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
 
-	/* apply damage, reduce health, execute AI state change */
-	virtual void DamageApply(int iDamageAmount, FVector vecDirection);
+	/** Current movement mode */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+		EEnemyMovement EEnemyType;
 
-	/* checks if player is in vision */
+	/* Movement direction priority for random patroling */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+		EEnemyMovementPriority EMovementPriority;
+
+	/** Death animations */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animations")
+		TArray<UAnimationAsset*> DeathAnimations;
+
+	/** Registers the object as a garbage object @Stage Handler	*/
+	void MarkAsGarbage() { this->bIsGarbage = true; }
+	
+	/** */
+	bool IsAlive() const { return this->bIsAlive && (this->Health > 0); }
+
+	/** Changes the current NPC AI state */
+	void ChangeAIState(ETargetEnemyState ENewState);
+	
+	/** AI Cycle  - probably replace with Blackboard */
+	virtual void HandleAI();
+	
+	/** AI:: Checks if the player is curently in sight */
 	const bool PlayerInSight();
 
-	/* BP wrapper for crawling getter - !remove! */
-	UFUNCTION(BlueprintCallable, Category = "SunShine")
-		bool BP_GetIsCrawling() const { return this->bIsCrawling; }
+	/** Pathfinding - Returns a random walkpoint on map */
+	FVector GetRandomWalkpoint(bool inRange, float Range);
+	
+	/** Changes the current NPC movement mode */
+	void ChangeMovementState(EEnemyMovementState ENewState);
+	
+	/** Starts movement to a world location */
+	bool WalkToLocation(FVector destinationWorldPosition);
+
+	/** Applies damage to NPC, switches AI state */
+	virtual void DamageApply(int iDamageAmount, FVector vecDirection);
 };

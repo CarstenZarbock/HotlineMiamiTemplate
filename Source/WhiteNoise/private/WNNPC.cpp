@@ -15,17 +15,9 @@ void ANPC::BeginPlay()
 {
 	Super::BeginPlay();
 
-	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
-	if (GMBase != nullptr)
-	{
-		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
-		if (GMWNBase != nullptr)
-		{
-			GMWNBase->Register(this, this->bIsGarbage);
-		}
-	}
+	this->RegisterOnGameMode();
 
-	/* Set Stats */
+	//set initial stats and modes
 	this->bIsAlive = true;
 	this->Health = this->MaxHealth;
 	this->bIsCrawling = false;
@@ -39,9 +31,39 @@ void ANPC::Tick( float DeltaTime )
 	this->HandleAI();
 }
 
+const bool ANPC::RegisterOnGameMode()
+{
+	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
+	if (GMBase != nullptr)
+	{
+		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
+		if (GMWNBase != nullptr)
+		{
+			return GMWNBase->Register(this, this->bIsGarbage);
+		}
+	}
+
+	return false;
+}
+
+const bool ANPC::DeathNotifyGameMode()
+{
+	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
+	if (GMBase != nullptr)
+	{
+		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
+		if (GMWNBase != nullptr)
+		{
+			return GMWNBase->RemoveAliveNPC(this);
+		}
+	}
+
+	return false;
+}
+
 const bool ANPC::PlayerInSight()
 {
-	//todo: Multiplayer
+	//todo: We probably want to avoid this cast each call
 	AWhiteNoiseCharacter* PlayerCharacter = Cast<AWhiteNoiseCharacter>(GetWorld()->GetFirstPlayerController()->GetPawn());
 	if (PlayerCharacter != nullptr)
 	{
@@ -56,7 +78,7 @@ const bool ANPC::PlayerInSight()
 	}
 	else
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, "[AI ERROR] PLAYER CHARACTER INVALID");
+		//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, "[AI ERROR] PLAYER CHARACTER INVALID");
 	}
 
 	return false;
@@ -69,30 +91,22 @@ void ANPC::HandleAI()
 
 void ANPC::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, "AEnemy");
 	//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, FString::FromInt(NormalImpulse.Size()));
 }
 
-void ANPC::ChangeState(ETargetEnemyState ENewState)
+void ANPC::ChangeAIState(ETargetEnemyState ENewState)
 {
 	switch (ENewState)
 	{
 	case ETargetEnemyState::TES_CRAWL:
 		this->bIsCrawling = true;
 		this->ChangeMovementState(EEnemyMovementState::EMS_CRAWL);
+		
 		break;
+
 	case ETargetEnemyState::TES_DEAD:
 		this->bIsAlive = false;
-
-		AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
-		if (GMBase != nullptr)
-		{
-			AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
-			if (GMWNBase != nullptr)
-			{
-				GMWNBase->RemoveAliveNPC(this);
-			}
-		}
+		this->DeathNotifyGameMode();
 
 		break;
 	}
@@ -143,11 +157,15 @@ bool ANPC::WalkToLocation(FVector vecDestinationLocation)
 	if (NavSys != nullptr)
 	{
 		NavSys->SimpleMoveToLocation(this->GetController(), vecDestinationLocation);
-		GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, FString::FromInt(vecDestinationLocation.X) + " " + FString::FromInt(vecDestinationLocation.Y) + " " + FString::FromInt(vecDestinationLocation.Z));
 		return true;
 	}
 
 	return false;
+}
+
+void ANPC::DamageApply(int iDamageAmount, FVector vecDirection)
+{
+
 }
 
 FHitResult ANPC::TraceLine(FVector Start, FVector End, bool Debug)
@@ -189,9 +207,4 @@ FHitResult ANPC::TraceLine(FVector Start, FVector End, bool Debug)
 	}
 
 	return RV_Hit;
-}
-
-void ANPC::DamageApply(int iDamageAmount, FVector vecDirection)
-{
-
 }
