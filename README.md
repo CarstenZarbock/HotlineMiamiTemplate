@@ -19,8 +19,14 @@ For visual updates take a look at my YouTube Channel:
 https://www.youtube.com/channel/UCPzO2aSD1EmtabGRs8NSfew
 
 Orientating on MS C++ Code Guideline.
+
 (Will be defined at a later time.)
 
 
 Please contact me for LFS access.
 Includes set up BP childclasses, meshes / animations, placeholder maps with set up floors / triggers / NPCs, excludes environment meshes because of copyright reasons. (Available at UE4 market, low poly env.)
+
+
+UE4 > 4.14 - 4.16
+
+Right click on the .uproject -> generate project files should do the job.
