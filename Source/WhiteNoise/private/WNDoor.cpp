@@ -4,33 +4,36 @@
 #include "WNDoor.h"
 #include "WNGameMode.h"
 
-// Sets default values
 AWNDoor::AWNDoor()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 }
 
-// Called when the game starts or when spawned
 void AWNDoor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	this->RegisterOnGameMode();
+
+	this->Close();
+}
+
+bool AWNDoor::RegisterOnGameMode()
+{
 	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
 	if (GMBase != nullptr)
 	{
 		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
 		if (GMWNBase != nullptr)
 		{
-			GMWNBase->Register(this, false);
+			return GMWNBase->Register(this, false);
 		}
 	}
 
-	this->Close();
+	return false;
 }
 
-// Called every frame
 void AWNDoor::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );

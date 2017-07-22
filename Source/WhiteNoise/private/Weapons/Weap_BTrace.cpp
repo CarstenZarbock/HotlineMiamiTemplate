@@ -9,11 +9,12 @@ ABulletTrace::ABulletTrace()
 	FireParticle->SetupAttachment(WeaponShotPoint);
 }
 
-void ABulletTrace::Fire(FVector vecTargetLocation)
+//todo: split / simplify this function, replace damage dealing method
+void ABulletTrace::Fire(FVector targetWorldLocation)
 {
-	if (!this->bIsShotPause && this->CurAmmo > 0)
+	if (!this->bIsShotPause && this->Ammo > 0)
 	{
-		FVector vecTraceDirection = this->WeaponShotPoint->GetComponentLocation() - vecTargetLocation;
+		FVector vecTraceDirection = this->WeaponShotPoint->GetComponentLocation() - targetWorldLocation;
 		FireParticle->SetWorldRotation(vecTraceDirection.ToOrientationQuat());
 		FireParticle->Activate(true);
 		vecTraceDirection = FVector(vecTraceDirection.X, vecTraceDirection.Y, 0);
@@ -70,26 +71,18 @@ void ABulletTrace::Fire(FVector vecTargetLocation)
 		}
 
 		bIsShotPause = true;
-		this->CurAmmo -= 1;
+		this->Ammo -= 1;
 	}
 }
 
-/* ------------------------------------------
-* TraceLine
-* @Param FVector Start - Start position world space
-* @Param FVector End - End position world space
-* @Param bool Debug - Draw Debug Lines
-* Casts a trace line, returns hitresult
-*/
-FHitResult ABulletTrace::TraceLine(FVector Start, FVector End, bool Debug)
+FHitResult ABulletTrace::TraceLine(FVector startWorldLocation, FVector endWorldLocation, bool bDebug)
 {
-	//todo: rework function
 	FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
 	RV_TraceParams.bTraceComplex = false;
 	RV_TraceParams.bTraceAsyncScene = true;
 	RV_TraceParams.bReturnPhysicalMaterial = true;
 
-	if (Debug)
+	if (bDebug)
 	{
 		const FName TraceTag("TraceTag");
 		GetWorld()->DebugDrawTraceTag = TraceTag;
@@ -101,17 +94,17 @@ FHitResult ABulletTrace::TraceLine(FVector Start, FVector End, bool Debug)
 
 	GetWorld()->LineTraceSingleByChannel(
 		RV_Hit,		       //result
-		Start,			  //start
-		End,			 //end
+		startWorldLocation,			  //start
+		endWorldLocation,			 //end
 		ECC_Visibility, //collision channel
 		RV_TraceParams
 	);
 
-	if (Debug)
+	if (bDebug)
 	{
 		DrawDebugLine(
 			GetWorld(),
-			Start,
+			startWorldLocation,
 			RV_Hit.ImpactPoint,
 			FColor(255, 0, 0),
 			false, -1, 0,

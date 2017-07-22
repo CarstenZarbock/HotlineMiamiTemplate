@@ -47,15 +47,15 @@ class WHITENOISE_API ANPC : public ACharacter
 private:
 	/** Movement Run Speed */
 	UPROPERTY(EditAnywhere, Category = "Movement")
-	float fRunning;
+	float SpeedRunning;
 	
 	/** Movement Walk Speed */
 	UPROPERTY(EditAnywhere, Category = "Movement")
-	float fWalking;
+	float SpeedWalking;
 	
 	/** Movement Crawl Speed */
 	UPROPERTY(EditAnywhere, Category = "Movement")
-	float fCrawling;	
+	float SpeedCrawling;
 	
 	/** Register as garbage actor @StageHandler*/
 	bool bIsGarbage = false;
@@ -69,13 +69,13 @@ private:
 protected:
 
 	/** Raycast helper, casts a preset traceline */
-	FHitResult TraceLine(FVector Start, FVector End, bool Debug);
+	FHitResult TraceLine(FVector startWorldLocation, FVector endWorldLocation, bool bDebug);
 
 	/** AI:: is actor currently moving */
 	bool bIsMovingToLocation;
 
 	/** AI:: target location of current movement */
-	FVector TargetLocation;
+	FVector TargetWorldLocation;
 
 	/** AI:: movement state - crawling on ground */
 	bool bIsCrawling;
@@ -109,11 +109,11 @@ public:
 
 	/** Current movement mode */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-		EEnemyMovement EEnemyType;
+		EEnemyMovement EnemyType;
 
 	/* Movement direction priority for random patroling */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-		EEnemyMovementPriority EMovementPriority;
+		EEnemyMovementPriority MovementPriority;
 
 	/** Death animations */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animations")
@@ -126,7 +126,7 @@ public:
 	bool IsAlive() const { return this->bIsAlive && (this->Health > 0); }
 
 	/** Changes the current NPC AI state */
-	void ChangeAIState(ETargetEnemyState ENewState);
+	void ChangeAIState(ETargetEnemyState newState);
 	
 	/** AI Cycle  - probably replace with Blackboard */
 	virtual void HandleAI();
@@ -135,14 +135,14 @@ public:
 	const bool PlayerInSight();
 
 	/** Pathfinding - Returns a random walkpoint on map */
-	FVector GetRandomWalkpoint(bool inRange, float Range);
+	FVector GetRandomWalkpoint(bool bInRange, float range);
 	
 	/** Changes the current NPC movement mode */
-	void ChangeMovementState(EEnemyMovementState ENewState);
+	void ChangeMovementState(EEnemyMovementState newState);
 	
 	/** Starts movement to a world location */
-	bool WalkToLocation(FVector destinationWorldPosition);
+	bool WalkToLocation(FVector destinationWorldLocation);
 
 	/** Applies damage to NPC, switches AI state */
-	virtual void DamageApply(int iDamageAmount, FVector vecDirection);
+	virtual void DamageApply(int damageAmount, FVector worldDirection);
 };

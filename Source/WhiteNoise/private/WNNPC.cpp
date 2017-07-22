@@ -7,7 +7,6 @@
 ANPC::ANPC()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	
 	this->GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ANPC::OnHit);
 }
 
@@ -17,7 +16,7 @@ void ANPC::BeginPlay()
 
 	this->RegisterOnGameMode();
 
-	//set initial stats and modes
+	//init stats - Not in constructor because of SpawnActorDeferred
 	this->bIsAlive = true;
 	this->Health = this->MaxHealth;
 	this->bIsCrawling = false;
@@ -94,9 +93,9 @@ void ANPC::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimiti
 	//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, FString::FromInt(NormalImpulse.Size()));
 }
 
-void ANPC::ChangeAIState(ETargetEnemyState ENewState)
+void ANPC::ChangeAIState(ETargetEnemyState newState)
 {
-	switch (ENewState)
+	switch (newState)
 	{
 	case ETargetEnemyState::TES_CRAWL:
 		this->bIsCrawling = true;
@@ -112,71 +111,70 @@ void ANPC::ChangeAIState(ETargetEnemyState ENewState)
 	}
 }
 
-void ANPC::ChangeMovementState(EEnemyMovementState ENewState)
+void ANPC::ChangeMovementState(EEnemyMovementState newState)
 {
-	switch (ENewState)
+	switch (newState)
 	{
 	case EEnemyMovementState::EMS_WALK:
-		this->GetCharacterMovement()->MaxWalkSpeed = this->fWalking;
+		this->GetCharacterMovement()->MaxWalkSpeed = this->SpeedWalking;
 		break;
 	case EEnemyMovementState::EMS_RUN:
-		this->GetCharacterMovement()->MaxWalkSpeed = this->fRunning;
+		this->GetCharacterMovement()->MaxWalkSpeed = this->SpeedRunning;
 		break;
 	case EEnemyMovementState::EMS_CRAWL:
-		this->GetCharacterMovement()->MaxWalkSpeed = this->fCrawling;
+		this->GetCharacterMovement()->MaxWalkSpeed = this->SpeedCrawling;
 		break;
 	default:
 		break;
 	}
 }
 
-FVector ANPC::GetRandomWalkpoint(bool inRange, float Range)
+FVector ANPC::GetRandomWalkpoint(bool bInRange = false, float range = 5000.0f)
 {
 	UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
-	FNavLocation Location;
+	FNavLocation WorldLocation;
 
 	if (NavSys != nullptr)
 	{
-		if (inRange)
+		if (bInRange)
 		{
-			NavSys->GetRandomReachablePointInRadius(this->GetActorLocation(), Range, Location);
+			NavSys->GetRandomReachablePointInRadius(this->GetActorLocation(), range, WorldLocation);
 		}
 		else
 		{
-			NavSys->GetRandomPoint(Location, NavSys->MainNavData);
+			NavSys->GetRandomPoint(WorldLocation, NavSys->MainNavData);
 		}
 	}
 
-	return Location.Location;
+	return WorldLocation.Location;
 }
 
-bool ANPC::WalkToLocation(FVector vecDestinationLocation)
+bool ANPC::WalkToLocation(FVector destinationWorldLocation)
 {
 	UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
 
 	if (NavSys != nullptr)
 	{
-		NavSys->SimpleMoveToLocation(this->GetController(), vecDestinationLocation);
+		NavSys->SimpleMoveToLocation(this->GetController(), destinationWorldLocation);
 		return true;
 	}
 
 	return false;
 }
 
-void ANPC::DamageApply(int iDamageAmount, FVector vecDirection)
+void ANPC::DamageApply(int damageAmount, FVector worldDirection)
 {
 
 }
 
-FHitResult ANPC::TraceLine(FVector Start, FVector End, bool Debug)
+FHitResult ANPC::TraceLine(FVector startWorldLocation, FVector endWorldLocation, bool bDebug)
 {
-	//todo: rework function
 	FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
 	RV_TraceParams.bTraceComplex = false;
 	RV_TraceParams.bTraceAsyncScene = true;
 	RV_TraceParams.bReturnPhysicalMaterial = true;
 
-	if (Debug)
+	if (bDebug)
 	{
 		const FName TraceTag("TraceTag");
 		GetWorld()->DebugDrawTraceTag = TraceTag;
@@ -187,18 +185,18 @@ FHitResult ANPC::TraceLine(FVector Start, FVector End, bool Debug)
 	FHitResult RV_Hit(ForceInit);
 
 	GetWorld()->LineTraceSingleByChannel(
-		RV_Hit,		       //result
-		Start,			  //start
-		End,			 //end
-		ECC_Visibility, //collision channel
+		RV_Hit,							//result
+		startWorldLocation,			  //start
+		endWorldLocation,			 //end
+		ECC_Visibility,				//collision channel
 		RV_TraceParams
 	);
 
-	if (Debug)
+	if (bDebug)
 	{
 		DrawDebugLine(
 			GetWorld(),
-			Start,
+			startWorldLocation,
 			RV_Hit.ImpactPoint,
 			FColor(255, 0, 0),
 			false, -1, 0,

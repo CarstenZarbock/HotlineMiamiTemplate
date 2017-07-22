@@ -16,6 +16,9 @@ struct FSaveGameArchive : public FObjectAndNameAsStringProxyArchive
 	}
 };
 
+/**
+* Serialization of each actor, SaveGame properties are used
+*/
 USTRUCT()
 struct FActorSaveData
 {
@@ -25,6 +28,8 @@ struct FActorSaveData
 	FName ActorName;
 	FTransform ActorTransform;
 	TArray<uint8> ActorData;
+
+	/** Reference to existing actor for clean up purpose */
 	AActor* LastActor;
 
 	friend FArchive& operator<<(FArchive& Ar, FActorSaveData& ActorData)
@@ -38,6 +43,7 @@ struct FActorSaveData
 	}
 };
 
+/** Object content for each stage */
 struct FStage
 {
 	int32 StageID;
@@ -52,16 +58,34 @@ struct FStage
 class WHITENOISE_API StageHandle
 {
 private:
+	/** Contains map placed actor objects of old and the current stage */
 	TArray<FStage> Stages;
+
+	/** Checks if given Stage ID does exist, creates one if it doesnt. Returns Array Index of the Stage */
 	int32 CheckStageArraySize(int32 StageID);
-	TArray<AActor*> GarbageActors; //Dynamic spawned actors while instage
+
+	/** Contains all dynamic spawned actors while playing a stage, excludes actors placed on map. */
+	TArray<AActor*> GarbageActors;
+
+	/** Cleans up GarbageActors on the current stage */
 	void EraseGarbage();
 
 public:
+	/** */
 	StageHandle();
+
+	/** */
 	~StageHandle();
+
+	/** Adds an actor to the given stage */
 	bool Register(AActor* TargetActor, int32 StageID, bool bIsGarbage);
+
+	/** Spawns all registered actors for this stage  */
 	void RespawnEntities(UWorld* World, int32 StageID);
+
+	/** Destroys all registered actors for this stage */
 	void EraseStage(UWorld* World, int32 StageID);
+
+	/** Called by GameMode when next stage is starting */
 	void IncreaseStage();
 };

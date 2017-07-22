@@ -11,7 +11,6 @@ AStageSwitch::AStageSwitch()
 {
 	ArrowPointerMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ArrowPointer"));
 	ArrowPointerMesh->AttachTo(RootComponent);
-	UE_LOG(LogTemp, Warning, TEXT("StageSwitch::Const"));
 }
 
 void AStageSwitch::BeginPlay()
@@ -26,6 +25,7 @@ void AStageSwitch::Tick(float DeltaTime)
 
 	if (this->bIsActive)
 	{
+		//todo: try to replace this cast
 		AWhiteNoiseCharacter* PlayerCharacter = Cast<AWhiteNoiseCharacter>(GetWorld()->GetFirstPlayerController()->GetPawn());
 		if (PlayerCharacter != nullptr)
 		{
@@ -78,7 +78,7 @@ void AStageSwitch::TriggerExecute(AActor* OtherActor)
 	if (this->LevelToLoad != "None")
 	{
 		UGameplayStatics::LoadStreamLevel(this, this->LevelToLoad, true, true, LatentInfo);
-		UE_LOG(LogTemp, Warning, TEXT("StageSwitch::LoadLevel"));
+		UE_LOG(LogTemp, Warning, TEXT("StageSwitch::LoadLevel %s"), *this->LevelToLoad.ToString());
 	}
 
 	for (TActorIterator<APlayerStart> ActorItr(GetWorld()); ActorItr; ++ActorItr)

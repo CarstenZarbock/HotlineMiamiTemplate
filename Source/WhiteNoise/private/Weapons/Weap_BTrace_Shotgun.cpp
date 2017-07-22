@@ -11,11 +11,11 @@ AShotgun::AShotgun()
 	fMaxRange = 10000.0f;
 	iBulletAmount = 20;
 	fBulletSpread = 4.0f;
-	fShotrate = 1.0f;
-	fShotPause = 1.0f;
+	Shotrate = 1.0f;
+	ShotPause = 1.0f;
 	MaxAmmo = 6;
 	WeaponType = EWeaponType::WT_SINGLE;
 	TargetAnimation = ETargetAnimation::TA_RIFLE;
-	fAI_AttackRange = 1000.0f;
+	AIAttackRange = 1000.0f;
 }
 

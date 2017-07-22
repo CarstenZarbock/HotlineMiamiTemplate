@@ -5,10 +5,8 @@
 #include "WNCharacter.h"
 #include "WNGameMode.h"
 
-// Sets default values
 AWeapon::AWeapon()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
@@ -19,34 +17,43 @@ AWeapon::AWeapon()
 	WeaponShotPoint->SetupAttachment(RootComponent);
 }
 
-// Called when the game starts or when spawned
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-	this->CurAmmo = this->MaxAmmo;
 
+	this->RegisterOnGameMode();
+
+	//init stats - BeginPlay because SpawnActorDeferred@StageHandle
+	this->Ammo = this->MaxAmmo;
+
+	//Changing physics state causes weird location errors @SpawnActorDeferred
+	//this->ChangeState(EWeaponState::WS_WORLD);
+}
+
+bool AWeapon::RegisterOnGameMode()
+{
 	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
 	if (GMBase != nullptr)
 	{
 		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
 		if (GMWNBase != nullptr)
 		{
-			GMWNBase->Register(this, this->bIsGarbage);
+			return GMWNBase->Register(this, this->bIsGarbage);
 		}
 	}
 
-	//this->ChangeState(EWeaponState::WS_WORLD);
+	return false;
 }
 
-// Called every frame
 void AWeapon::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
-	this->CustomTick(DeltaTime);
+	this->CustomTick( DeltaTime );
 
 	if (this->GetState() == EWeaponState::WS_THROWN)
 	{
-		if (GetGameTimeSinceCreation() > this->fThrowTime + 0.5f)
+		//todo: Replace with DeltaTime solution
+		if (GetGameTimeSinceCreation() > this->ThrowTime + 0.5f)
 		{
 			if (this->GetVelocity().Size() < 50.0f)
 			{
@@ -57,8 +64,8 @@ void AWeapon::Tick( float DeltaTime )
 
 	if (this->bIsShotPause)
 	{
-		this->fShotPauseTimer += this->fShotrate * DeltaTime;
-		if (this->fShotPauseTimer >= this->fShotPause)
+		this->fShotPauseTimer += this->Shotrate * DeltaTime;
+		if (this->fShotPauseTimer >= this->ShotPause)
 		{
 			this->bIsShotPause = false;
 			this->fShotPauseTimer = 0;
@@ -71,13 +78,14 @@ void AWeapon::CustomTick(float DeltaTime)
 
 }
 
-void AWeapon::ChangeState(EWeaponState ENewState)
+void AWeapon::ChangeState(EWeaponState newState)
 {
 	FCollisionResponseContainer ColContainer;
-	//0 None, 1 Overlap, 2 Block
-	this->EState = ENewState;
 
-	switch (this->EState)
+	//0 None, 1 Overlap, 2 Block
+	this->State = newState;
+
+	switch (this->State)
 	{
 	case EWeaponState::WS_WORLD:
 		this->WeaponMesh->SetCustomDepthStencilValue(1);
@@ -91,6 +99,7 @@ void AWeapon::ChangeState(EWeaponState ENewState)
 
 		this->WeaponMesh->SetCollisionResponseToChannels(ColContainer);
 		break;
+
 	case EWeaponState::WS_EQUIP:
 		this->WeaponMesh->SetCustomDepthStencilValue(0);
 		this->WeaponMesh->SetCollisionObjectType(ECC_WorldDynamic);
@@ -115,7 +124,7 @@ void AWeapon::ChangeState(EWeaponState ENewState)
 		ColContainer.Pawn = 2;
 
 		this->WeaponMesh->SetCollisionResponseToChannels(ColContainer);
-		this->fThrowTime = GetGameTimeSinceCreation();
+		this->ThrowTime = GetGameTimeSinceCreation();
 		break;
 	}
 }
@@ -124,12 +133,11 @@ void AWeapon::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrim
 {
 	if (Cast<ANPC>(OtherActor) != nullptr)
 	{
-		//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, "AWeapon");
 		//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, FString::FromInt(NormalImpulse.Size()));
 	}
 }
 
-void AWeapon::Fire(FVector vecTargetLocation)
+void AWeapon::Fire(FVector targetWorldLocation)
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Blue, "Weapon::Fire");
+	
 }

@@ -48,7 +48,7 @@ void ADoorSwingSingle::Tick(float DeltaSeconds)
 
 void ADoorSwingSingle::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
 {
-	/* Knockout */
+
 }
 
 void ADoorSwingSingle::Open(FVector worldDirection)

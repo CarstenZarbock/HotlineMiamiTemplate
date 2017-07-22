@@ -9,19 +9,28 @@ UCLASS()
 class WHITENOISE_API AWNDoor : public AActor
 {
 	GENERATED_BODY()
+private:
+	/** Register the actor on Game Mode / StageHandler */
+	bool RegisterOnGameMode();
+
 protected:
+
+	/** */
 	bool bIsOpen;
 
 public:	
-	// Sets default values for this actor's properties
+	/** */
 	AWNDoor();
 
-	// Called when the game starts or when spawned
+	/** */
 	virtual void BeginPlay() override;
 	
-	// Called every frame
+	/** */
 	virtual void Tick( float DeltaSeconds ) override;
 
+	/** */
 	virtual void Open(FVector worldDirection);
+
+	/** */
 	virtual void Close();
 };

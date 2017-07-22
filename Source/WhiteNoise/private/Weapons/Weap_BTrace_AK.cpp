@@ -11,11 +11,11 @@ ARifle_AK::ARifle_AK()
 	fMaxRange = 10000.0f;
 	iBulletAmount = 1;
 	fBulletSpread = 0.0f;
-	fShotrate = 10.0f;
-	fShotPause = 1.0f;
+	Shotrate = 10.0f;
+	ShotPause = 1.0f;
 	MaxAmmo = 30;
 	WeaponType = EWeaponType::WT_AUTOMATIC;
 	TargetAnimation = ETargetAnimation::TA_RIFLE;
-	fAI_AttackRange = 2000.0f;
+	AIAttackRange = 2000.0f;
 }
 

@@ -53,7 +53,7 @@ void Anpc_guard::HandleAI()
 
 void Anpc_guard::HandleMovementTypes()
 {
-	switch (this->EEnemyType)
+	switch (this->EnemyType)
 	{
 	case EEnemyMovement::EM_IDLE:
 		this->Handle_Idle();
@@ -126,7 +126,7 @@ void Anpc_guard::Handle_RandomPatrol()
 
 	if (this->testnext < GetGameTimeSinceCreation())
 	{
-		if (this->EMovementPriority == EEnemyMovementPriority::EMP_RIGHT)
+		if (this->MovementPriority == EEnemyMovementPriority::EMP_RIGHT)
 		{
 			vecTraceEnd = this->GetActorRightVector();
 			vecRotationDirection = FVector(0, 90.0f, 0);
@@ -152,7 +152,7 @@ void Anpc_guard::Handle_RandomPatrol()
 
 	if (this->testnext < GetGameTimeSinceCreation())
 	{
-		if (this->EMovementPriority == EEnemyMovementPriority::EMP_RIGHT)
+		if (this->MovementPriority == EEnemyMovementPriority::EMP_RIGHT)
 		{
 			vecTraceEnd = this->GetActorRightVector() * -1;
 			vecRotationDirection = FVector(0, -90.0f, 0);

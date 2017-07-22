@@ -1,5 +1,11 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
 
+/************************************************************************/
+/* StageHandle is used to instant restart the current stage / floor,	*/
+/* instead of a full map reload.										*/
+/* TArray for multiple stages is NOT needed                             */
+/* Todo: Replace with single stage to save memory						*/
+/************************************************************************/
 #include "WhiteNoise.h"
 #include "WNStageHandle.h"
 
@@ -29,7 +35,7 @@ int32 StageHandle::CheckStageArraySize(int32 StageID)
 
 	//Stage is not initialized yet
 	int32 newIndex = this->Stages.Add(FStage(StageID));
-	UE_LOG(LogTemp, Warning, TEXT("Amount of stages after StageHandle::CheckStageArraySize : %d"), this->Stages.Num());
+	UE_LOG(LogTemp, Warning, TEXT("Amount of stages after StageHandle::CheckStageArraySize: %d"), this->Stages.Num());
 
 	return newIndex;
 }

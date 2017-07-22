@@ -1,4 +1,8 @@
 // Copyright 2016 Carsten Zarbock / Rebound-Software
+/************************************************************************/
+/* GameMode                                                             */
+/************************************************************************/
+
 #include "WhiteNoise.h"
 #include "WNGameMode.h"
 #include "WNPlayerController.h"
@@ -22,10 +26,7 @@ bool AWhiteNoiseGameMode::RestartStage()
 {
 	this->bNeedStageInit = false;
 
-	/* Delete all NPCs */
 	this->StageHandler->EraseStage(GetWorld(), this->CurrentStage);
-
-	/* Respawn all NPCs */
 	this->StageHandler->RespawnEntities(GetWorld(), this->CurrentStage);
 
 	return true;
@@ -33,10 +34,8 @@ bool AWhiteNoiseGameMode::RestartStage()
 
 bool AWhiteNoiseGameMode::Register(AActor* TargetActor, bool bIsGarbage = false)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Gamemod register1 : %s"), *TargetActor->GetName());
 	if (bIsGarbage || this->bNeedStageInit)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Gamemod register2 : %s"), *TargetActor->GetName());
 		this->StageHandler->Register(TargetActor, this->CurrentStage, bIsGarbage);
 
 		this->RegisterAliveNPC(TargetActor);
@@ -62,10 +61,12 @@ bool AWhiteNoiseGameMode::RegisterAliveNPC(AActor* TargetActor)
 bool AWhiteNoiseGameMode::RemoveAliveNPC(AActor* TargetActor)
 {
 	ANPC* TargetNPC = Cast<ANPC>(TargetActor);
+
 	if (TargetNPC)
 	{
 		if (this->AliveNPCs.RemoveSingle(TargetActor))
 		{
+			//todo: Diffent Stage / Floor goals, currently only ends if all registered NPCs are dead
 			/* Check for Stage complete */
 			if (this->AliveNPCs.Num() == 0)
 			{
@@ -103,8 +104,6 @@ bool AWhiteNoiseGameMode::IncreaseStage()
 
 AActor* AWhiteNoiseGameMode::FindPlayerStart(AController* Player, const FString &IncomingName)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AWhiteNoiseGameMode::FindPlayerStart"));
-
 	for (TActorIterator<APlayerStart> ActorItr(GetWorld()); ActorItr; ++ActorItr)
 	{
 		APlayerStart* TargetStart = *ActorItr;

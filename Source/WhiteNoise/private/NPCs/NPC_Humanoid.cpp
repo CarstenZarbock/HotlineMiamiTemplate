@@ -74,8 +74,9 @@ void AHumanoid::BeginPlay()
 	BottomRightLegGore->AttachToComponent(this->GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("RightUpLeg"));
 
 	WeaponGripPoint->AttachToComponent(this->GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("RightHand"));
-	FVector bla = { -90.0f, 150.0f, 80.0f };
-	WeaponGripPoint->SetRelativeRotation(FQuat::MakeFromEuler(bla));
+
+	FVector tempWeaponGripRotation = { -90.0f, 150.0f, 80.0f }; //todo: That's bulls...
+	WeaponGripPoint->SetRelativeRotation(FQuat::MakeFromEuler(tempWeaponGripRotation));
 	
 	this->ECurrentAnimation = ETargetAnimation::TA_NORMAL;
 	this->SpawnStartWeapon();
@@ -88,20 +89,18 @@ void AHumanoid::HandleAI()
 
 void AHumanoid::HandleCrawl()
 {
-	if (!this->bIsMovingToPoint)
+	if (this->bIsMovingToLocation)
 	{
-		/* He's not crawling to a target point */
-		FVector vecDestination = this->GetRandomWalkpoint(true, 1000.0f); //todo fix range;
-		this->bIsMovingToPoint = this->WalkToLocation(vecDestination);
-		this->vecTargetPoint = vecDestination;
+		if (FVector::Dist(this->GetActorLocation(), this->TargetWorldLocation) < 300.0f) //todo: Reach Distance
+		{
+			this->bIsMovingToLocation = false;
+		}
 	}
 	else
 	{
-		/* we're crawling to a position, check if we reached, set to false */
-		if (FVector::Dist(this->GetActorLocation(), this->vecTargetPoint) < 300.0f) //todo: Reach Distance
-		{
-			this->bIsMovingToPoint = false;
-		}
+		FVector worldLocationDestination = this->GetRandomWalkpoint(true, 1000.0f); //todo fix range;
+		this->bIsMovingToLocation = this->WalkToLocation(worldLocationDestination);
+		this->TargetWorldLocation = worldLocationDestination;
 	}
 }
 
@@ -157,7 +156,6 @@ bool AHumanoid::Weapon_Pickup(AWeapon* TargetWeaponActor)
 	}
 	else
 	{
-		/* drop current weapon */
 		this->Weapon_Drop();
 	}
 	return false;
@@ -171,7 +169,7 @@ void AHumanoid::DamageApply(int iDamageAmount, FVector vecDirection)
 		{
 			/* set crawling */
 			this->Health -= iDamageAmount;
-			this->ChangeState(ETargetEnemyState::TES_CRAWL);
+			this->ChangeAIState(ETargetEnemyState::TES_CRAWL);
 			if (this->GetWeapon() != nullptr && this->GetWeapon()->IsValidLowLevel())
 			{
 				this->Weapon_Drop();
@@ -181,7 +179,7 @@ void AHumanoid::DamageApply(int iDamageAmount, FVector vecDirection)
 		{
 			/* Animation death */
 			this->ExecuteDeathAnimation(vecDirection);
-			this->ChangeState(ETargetEnemyState::TES_DEAD);
+			this->ChangeAIState(ETargetEnemyState::TES_DEAD);
 			if (this->GetWeapon() != nullptr && this->GetWeapon()->IsValidLowLevel())
 			{
 				this->Weapon_Drop();
@@ -191,7 +189,7 @@ void AHumanoid::DamageApply(int iDamageAmount, FVector vecDirection)
 		{
 			/* splatter */
 			this->ExecuteDeathFullsplat(vecDirection);
-			this->ChangeState(ETargetEnemyState::TES_DEAD);
+			this->ChangeAIState(ETargetEnemyState::TES_DEAD);
 			if (this->GetWeapon() != nullptr && this->GetWeapon()->IsValidLowLevel())
 			{
 				this->Weapon_Drop();
@@ -326,5 +324,9 @@ void AHumanoid::ExecuteDeathAnimation(FVector vecDirection)
 	this->ActivateGoreParticles(ECharacterLimbs::LIMB_TORSO);
 	}*/
 
-	this->GetMesh()->PlayAnimation(DeathAnimation_1, false);
+	//todo: Replace with a real solution
+	if (this->DeathAnimations.Num() > 1 && this->DeathAnimations[0] != nullptr)
+	{
+		this->GetMesh()->PlayAnimation(this->DeathAnimations[0], false);
+	}
 }

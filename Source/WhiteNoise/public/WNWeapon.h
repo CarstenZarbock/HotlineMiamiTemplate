@@ -2,9 +2,10 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
-#include "Engine.h" //todo: Change to IWYU System
+#include "Engine.h" //todo: IWYU
 #include "WNWeapon.generated.h"
 
+/** Weapon World States */
 UENUM(BlueprintType)
 enum class EWeaponState : uint8
 {
@@ -13,6 +14,7 @@ enum class EWeaponState : uint8
 	WS_THROWN		UMETA(DisplayName = "THROWN")
 };
 
+/** Character animation stance while eqipped */
 UENUM(BlueprintType)
 enum class ETargetAnimation : uint8
 {
@@ -20,10 +22,12 @@ enum class ETargetAnimation : uint8
 	TA_RIFLE			UMETA(DisplayName = "RIFLE")
 };
 
+/** Shot types, single / burst / auto */
 UENUM(BlueprintType)
 enum class EWeaponType : uint8
 {
 	WT_SINGLE			UMETA(DisplayName = "SINGLESHOT"),
+	WT_BURST			UMETA(DisplayName = "BURST"),
 	WT_AUTOMATIC		UMETA(DisplayName = "AUTOMATIC")
 };
 
@@ -33,59 +37,97 @@ class WHITENOISE_API AWeapon : public AActor
 	GENERATED_BODY()
 
 private:
+	/** Register the actor on Game Mode / StageHandler */
+	bool RegisterOnGameMode();
+
 protected:
-	EWeaponState EState;
-	float fThrowTime;
+	/** Current weapon state - In World : Equipped : In Air */
+	EWeaponState State;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
+	/** Time in ms since weapon has been thrown */
+	float ThrowTime;
+
+	/** Animation type characters are playing while holding the weapon */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations", meta = (AllowPrivateAccess = "true"))
 		ETargetAnimation TargetAnimation;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
-		class USceneComponent* WeaponShotPoint;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
-		float fAI_AttackRange;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
-		EWeaponType WeaponType;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
-		float fShotrate;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
-		float fShotPause;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
-		uint8 MaxAmmo;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
-		uint8 CurAmmo;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn", meta = (AllowPrivateAccess = "true"))
-		uint8 SpawnStage;
+	/** Location component used to spawn the projectile / fire the shot */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+		class USceneComponent* WeaponShotPoint;
+
+	/** AI range to fire the weapon */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
+		float AIAttackRange;
+
+	/** Singleshot / Burst / Automatic shots */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
+		EWeaponType WeaponType;
+
+	/** Pause time between each shot */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
+		float ShotPause;
+
+	/** Current pause timer between shots */
 	float fShotPauseTimer = 0;
+
+	/** Time factor used to increment the current pause timer */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
+		float Shotrate;
+
+	/** */
 	bool bIsShotPause = false;
+
+	/** */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
+		uint8 MaxAmmo;
+
+	/** Current ammo in clip */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
+		uint8 Ammo;
+
+	/** Register as garbage actor @StageHandler*/
 	bool bIsGarbage;
 
 public:	
+	/** */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Mesh")
 		class USkeletalMeshComponent* WeaponMesh;
 
-	// Sets default values for this actor's properties
+	/** */
 	AWeapon();
 
-	// Called when the game starts or when spawned
+	/** */
 	virtual void BeginPlay() override;
 	
-	// Called every frame
+	/** */
 	virtual void Tick( float DeltaSeconds ) override;
+
+	/** Should be removed for virtual function performance reasons */
 	virtual void CustomTick(float DeltaSeconds);
 
-	void MarkAsGarbage() { bIsGarbage = true; }
-
-	void ChangeState(EWeaponState ENewState);
-	EWeaponState GetState() const { return EState; }
-
-	ETargetAnimation GetTargetAnimation() const { return TargetAnimation; }
-
-	float GetAIAttackRange() const { return fAI_AttackRange; }
-
-	EWeaponType GetWeaponType() const { return WeaponType; }
+	/** */
 	UFUNCTION()
 		void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
 
-	virtual void Fire(FVector vecTargetLocation);
+	/** Registers the object as a garbage object @Stage Handler	*/
+	void MarkAsGarbage() { this->bIsGarbage = true; }
+
+	/** Executes firing */
+	virtual void Fire(FVector targetWorldLocation);
+
+	/** Changes the state of the weapon actor in the world */
+	void ChangeState(EWeaponState newState);
+
+	//Todo: Find a better solution for the following getter
+	/** Returns the weapon state */
+	EWeaponState GetState() const { return State; }
+
+	/** Returns the animationtype used by characters while the weapon is equipped */
+	ETargetAnimation GetTargetAnimation() const { return TargetAnimation; }
+
+	/** Returns the min distance an AI has to reach to be able to attack */
+	float GetAIAttackRange() const { return AIAttackRange; }
+
+	/** Returns the weapon type to determine if autofire is possible */
+	EWeaponType GetWeaponType() const { return WeaponType; }
 };

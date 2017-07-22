@@ -55,7 +55,7 @@ void AWhiteNoisePlayerController::CameraFreeMoveHandle(float DeltaSeconds)
 	float fMoveX = (ViewportSize.X / 100.0f) * fMovePercentage;
 	float fMoveY = (ViewportSize.Y / 100.0f) * fMovePercentage;
 
-	if (PlayerPawn != nullptr)
+	if (PlayerPawn != nullptr) //todo: replace with bPawnPossessed
 	{
 		if (fLocX <= fMoveX)
 		{
@@ -84,7 +84,7 @@ void AWhiteNoisePlayerController::CameraFreeMoveHandle(float DeltaSeconds)
 
 void AWhiteNoisePlayerController::RotatePlayerToMouse()
 {
-	if (PlayerPawn != nullptr)
+	if (PlayerPawn != nullptr) //todo: replace with bPawnPossessed
 	{
 		PlayerPawn->ManualRotation(this->GetMouseCursorPosition());
 	}
@@ -92,8 +92,7 @@ void AWhiteNoisePlayerController::RotatePlayerToMouse()
 
 void AWhiteNoisePlayerController::MoveForward(float fRate)
 {
-	/* Add Movement to the direction */
-	if (PlayerPawn != nullptr && !this->bCameraFreeMovement)
+	if (PlayerPawn != nullptr && !this->bCameraFreeMovement)  //todo: replace with bPawnPossessed
 	{
 		PlayerPawn->HandleMovement(FVector(1, 0, 0), fRate);
 	}
@@ -101,8 +100,7 @@ void AWhiteNoisePlayerController::MoveForward(float fRate)
 
 void AWhiteNoisePlayerController::MoveSideward(float fRate)
 {
-	/* Add Movement to the direction */
-	if (PlayerPawn != nullptr && !this->bCameraFreeMovement)
+	if (PlayerPawn != nullptr && !this->bCameraFreeMovement)  //todo: replace with bPawnPossessed
 	{
 		PlayerPawn->HandleMovement(FVector(0, 1, 0), fRate);
 	}
@@ -110,21 +108,19 @@ void AWhiteNoisePlayerController::MoveSideward(float fRate)
 
 FVector AWhiteNoisePlayerController::GetMouseCursorPosition()
 {
-	// Trace to see what is under the mouse cursor
 	FHitResult Hit;
 	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
 
 	if (Hit.bBlockingHit)
 	{
-		// We hit something, move there
 		return Hit.ImpactPoint;
 	}
-	return{ 0, 0, 0 };
+	return{ 0, 0, 0 }; //todo: replace with fail return to avoid mistaken rotation
 }
 
 void AWhiteNoisePlayerController::PickupObject()
 {
-	if (PlayerPawn != nullptr && !this->bCameraFreeMovement)
+	if (PlayerPawn != nullptr && !this->bCameraFreeMovement)  //todo: replace with bPawnPossessed
 	{
 		PlayerPawn->Input_Pickup();
 	}
@@ -132,7 +128,7 @@ void AWhiteNoisePlayerController::PickupObject()
 
 void AWhiteNoisePlayerController::Fire()
 {
-	if (PlayerPawn != nullptr)
+	if (PlayerPawn != nullptr) //todo: replace with bPawnPossessed
 	{
 		PlayerPawn->WeaponFire_Start();
 	}
@@ -140,7 +136,7 @@ void AWhiteNoisePlayerController::Fire()
 
 void AWhiteNoisePlayerController::Fire_Stop()
 {
-	if (PlayerPawn != nullptr)
+	if (PlayerPawn != nullptr) //todo: replace with bPawnPossessed
 	{
 		PlayerPawn->WeaponFire_Stop();
 	}
@@ -148,7 +144,7 @@ void AWhiteNoisePlayerController::Fire_Stop()
 
 void AWhiteNoisePlayerController::Throw()
 {
-	if (PlayerPawn != nullptr)
+	if (PlayerPawn != nullptr) //todo: replace with bPawnPossessed
 	{
 		if (!this->bCameraFreeMovement)
 		{
@@ -159,7 +155,6 @@ void AWhiteNoisePlayerController::Throw()
 
 void AWhiteNoisePlayerController::LockEnemy()
 {
-	//Get Enemy below Mouse Cursor
 	FHitResult Hit;
 	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
 
@@ -178,7 +173,7 @@ void AWhiteNoisePlayerController::LockEnemy()
 
 void AWhiteNoisePlayerController::CameraToggle()
 {
-	if (PlayerPawn != nullptr)
+	if (PlayerPawn != nullptr) //todo: replace with bPawnPossessed
 	{
 		this->bCameraFreeMovement = PlayerPawn->CameraFreeMoveToggle(true);
 	}
@@ -186,7 +181,7 @@ void AWhiteNoisePlayerController::CameraToggle()
 
 void AWhiteNoisePlayerController::StopCameraToggle()
 {
-	if (PlayerPawn != nullptr)
+	if (PlayerPawn != nullptr) //todo: replace with bPawnPossessed
 	{
 		this->bCameraFreeMovement = PlayerPawn->CameraFreeMoveToggle(false);
 	}
@@ -203,5 +198,4 @@ void AWhiteNoisePlayerController::RestartStage()
 			GMWNBase->RestartStage();
 		}
 	}
-
 }
