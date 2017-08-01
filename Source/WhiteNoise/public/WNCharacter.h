@@ -21,11 +21,11 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
 
-	/** */
+	/** Spring arm to detect correct location for item throwing / dropping */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* WeaponThrowArm;
 
-	/** */
+	/** Socket to attach the eqipped weapon */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* WeaponGripPoint;
 
@@ -35,11 +35,11 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
 	float WeaponPickupDistance = 500.0f;
 
-	/** */
+	/** Actor reference to currently eqipped item */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
 	AWeapon* CurrentWeapon;
 
-	/** */
+	/** Required for auto weapons */
 	bool bIsFiring;
 
 	/** */
@@ -49,11 +49,11 @@ private:
 	void WeaponPickup(AWeapon* weaponActor);
 	
 	/* Movement & Camera */
-	/** */
+	/** Max camera distance, based on character location, for free roaming */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
 	float MaxFreeCamDistance = 2000.0f;
 
-	/** */
+	/** Current holding animation type (Normal, Pistol, Rifle, ...) */
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
 	ETargetAnimation CurrentAnimation;
 	
@@ -64,14 +64,14 @@ private:
 	/** */
 	bool bIsCameraFreeMovement;
 
-	/** */
+	/** Sets the camera position back to character location */
 	void ResetFreeCam();
 
-	/** */
+	/** Rotates character to given world location */
 	void HandleRotation(FVector worldPosition);
 
 	/* Actions */
-	/** */
+	/** Reference to aim locked enemy */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Actions", meta = (AllowPrivateAccess = "true"))
 	ANPC* LockedEnemy;
 
@@ -104,10 +104,10 @@ public:
 	/** */
 	bool CameraFreeMoveToggle(const bool bIsCameraFreeMovement);
 
-	/** */
+	/** Returns mouse cursor position in world location, based on a Trace */
 	FVector GetMouseCursorPosition() const;
 
-	/** */
+	/** Character Rotation based on mouse position, called by controller */
 	void ManualRotation(const FVector worldPosition);
 
 	/* Inventory */
@@ -131,10 +131,10 @@ public:
 		void ForceWeaponEquip(AWeapon* weaponActor);
 
 	/* Actions */
-	/** */
+	/** Aimlocks an enemy */
 	bool LockEnemy(ANPC* LockedEnemy);
 
-	/** */
+	/** handles character rotation to locked enemy, and de-locking if dead */
 	void HandleEnemyLock();
 
 	/* */

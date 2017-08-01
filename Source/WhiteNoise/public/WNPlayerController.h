@@ -14,10 +14,10 @@ public:
 	AWhiteNoisePlayerController();
 
 protected:
-	/** */
+	/** Owned character pawn by controller */
 	AWhiteNoiseCharacter* PlayerPawn;
 
-	/** */
+	/** Camera state is in free roaming */
 	bool bCameraFreeMovement;
 
 	/** */
@@ -36,10 +36,10 @@ protected:
 	/** */
 	void MoveSideward(float fRate);
 
-	/** */
+	/** Gets the world location of the mouse cursor, based on a Trace */
 	FVector GetMouseCursorPosition();
 
-	/** */
+	/** Rotates player character to mouse world location */
 	void RotatePlayerToMouse();
 
 
@@ -49,10 +49,10 @@ protected:
 	/** */
 	void Fire();
 
-	/** */
+	/** Executed if Fire Input Key is released */
 	void Fire_Stop();
 
-	/** */
+	/** Throws equipped item */
 	void Throw();
 
 	/** */
@@ -64,10 +64,10 @@ protected:
 	/** */
 	void CameraFreeMoveHandle(float DeltaSeconds);
 
-	/** */
+	/** Checks if an enemy is under mouse cursor and aim locks it */
 	void LockEnemy();
 
-	/** */
+	/** Calls restart stage on game mode */
 	void RestartStage();
 };
 

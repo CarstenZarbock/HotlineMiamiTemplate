@@ -74,7 +74,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
 		float Shotrate;
 
-	/** */
+	/** Break between shots */
 	bool bIsShotPause = false;
 
 	/** */
