@@ -5,7 +5,7 @@
 
 ABulletTrace::ABulletTrace()
 {
-	FireParticle = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("asdsdfsdf"));
+	FireParticle = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("ShotParticle"));
 	FireParticle->SetupAttachment(WeaponShotPoint);
 }
 
