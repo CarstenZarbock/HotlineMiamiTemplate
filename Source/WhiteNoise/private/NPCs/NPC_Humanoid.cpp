@@ -296,6 +296,7 @@ void AHumanoid::ExecuteDeathAnimation(FVector vecDirection)
 {
 	this->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	/* replace random with "some" system */
 	if (FMath::RandBool())
 	{
 		this->CutLimb(MeshHead, true);
