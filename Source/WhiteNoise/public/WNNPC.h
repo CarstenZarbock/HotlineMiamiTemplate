@@ -78,6 +78,7 @@ protected:
 	FVector TargetWorldLocation;
 
 	/** AI:: movement state - crawling on ground */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bIsCrawling;
 
 	/** AI:: has seen player at last check cycle */
