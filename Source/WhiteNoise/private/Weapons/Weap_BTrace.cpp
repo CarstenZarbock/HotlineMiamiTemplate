@@ -15,8 +15,13 @@ void ABulletTrace::Fire(FVector targetWorldLocation)
 	if (!this->bIsShotPause && this->Ammo > 0)
 	{
 		FVector vecTraceDirection = this->WeaponShotPoint->GetComponentLocation() - targetWorldLocation;
-		FireParticle->SetWorldRotation(vecTraceDirection.ToOrientationQuat());
-		FireParticle->Activate(true);
+		
+		if (FireParticle != nullptr)
+		{
+			FireParticle->SetWorldRotation(vecTraceDirection.ToOrientationQuat());
+			FireParticle->Activate(true);
+		}
+
 		vecTraceDirection = FVector(vecTraceDirection.X, vecTraceDirection.Y, 0);
 		vecTraceDirection *= -1;
 
