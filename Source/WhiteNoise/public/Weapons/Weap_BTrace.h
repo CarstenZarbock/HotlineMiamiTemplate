@@ -17,7 +17,7 @@ public:
 	ABulletTrace();
 
 	/** Particle system used on firing the weapon */
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gore Particles")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Particles")
 		UParticleSystemComponent* FireParticle;
 
 	/* Damage dealing system should be remade */
