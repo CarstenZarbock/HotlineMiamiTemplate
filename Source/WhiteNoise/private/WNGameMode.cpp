@@ -28,7 +28,7 @@ bool AWhiteNoiseGameMode::RestartStage()
 
 	this->StageHandler->EraseStage(GetWorld(), this->CurrentStage);
 	this->StageHandler->RespawnEntities(GetWorld(), this->CurrentStage);
-
+	this->StageHandler->RespawnPlayer(GetWorld());
 	return true;
 }
 
@@ -43,6 +43,21 @@ bool AWhiteNoiseGameMode::Register(AActor* TargetActor, bool bIsGarbage = false)
 	}
 
 	return false;
+}
+
+bool AWhiteNoiseGameMode::RegisterPlayer(APawn* PlayerCharacter)
+{
+	if (this->bNeedStageInit)
+	{
+		return this->StageHandler->RegisterPlayer(PlayerCharacter);
+	}
+
+	return false;
+}
+
+bool AWhiteNoiseGameMode::UpdatePlayer(APawn* PlayerCharacter)
+{
+	return this->StageHandler->UpdatePlayer(PlayerCharacter);
 }
 
 bool AWhiteNoiseGameMode::RegisterAliveNPC(AActor* TargetActor)

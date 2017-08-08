@@ -15,6 +15,7 @@ AWeapon::AWeapon()
 
 	WeaponShotPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ShotPoint"));
 	WeaponShotPoint->SetupAttachment(RootComponent);
+
 }
 
 void AWeapon::BeginPlay()
@@ -24,7 +25,10 @@ void AWeapon::BeginPlay()
 	this->RegisterOnGameMode();
 
 	//init stats - BeginPlay because SpawnActorDeferred@StageHandle
-	this->Ammo = this->MaxAmmo;
+	if (!bIsRestartWeapon)
+	{
+		this->Ammo = this->MaxAmmo;
+	}
 
 	//Changing physics state causes weird location errors @SpawnActorDeferred
 	//this->ChangeState(EWeaponState::WS_WORLD);

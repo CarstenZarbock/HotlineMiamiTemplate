@@ -36,8 +36,8 @@ private:
 	float WeaponPickupDistance = 500.0f;
 
 	/** Actor reference to currently eqipped item */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
-	AWeapon* CurrentWeapon;
+	//UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+	//AWeapon* CurrentWeapon;
 
 	/** Required for auto weapons */
 	bool bIsFiring;
@@ -78,6 +78,8 @@ private:
 	/** */
 	bool bHasLockedEnemy;
 
+	/** */
+	bool RegisterOnGameMode();
 public:
 	/** */
 	AWhiteNoiseCharacter();
@@ -136,6 +138,25 @@ public:
 
 	/** handles character rotation to locked enemy, and de-locking if dead */
 	void HandleEnemyLock();
+	
+	/** */
+	bool hasItemEquipped() const;
+
+	/** */
+	FString GetItemName() const;
+
+	/** */
+	UClass* GetItemClass() const;
+
+	/** */
+	FTransform GetItemTransform() const;
+
+	/** Actor reference to currently eqipped item
+	* Currently public for actor serialization @StageHandle::RegisterPlayer *
+	* >>> change!
+	*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+	AWeapon* CurrentWeapon;
 
 	/* */
 	UFUNCTION()

@@ -82,13 +82,17 @@ protected:
 		uint8 MaxAmmo;
 
 	/** Current ammo in clip */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(SaveGame, EditDefaultsOnly, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
 		uint8 Ammo;
 
 	/** Register as garbage actor @StageHandler*/
 	bool bIsGarbage;
 
 public:	
+	/** */
+	UPROPERTY(SaveGame)
+	bool bIsRestartWeapon;
+
 	/** */
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Mesh")
 		class USkeletalMeshComponent* WeaponMesh;

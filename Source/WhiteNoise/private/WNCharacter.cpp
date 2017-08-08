@@ -4,6 +4,7 @@
 #include "Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
 #include "WNCharacter.h"
 #include "Door_SwingSingle.h"
+#include "WNGameMode.h"
 
 AWhiteNoiseCharacter::AWhiteNoiseCharacter()
 {
@@ -48,11 +49,27 @@ AWhiteNoiseCharacter::AWhiteNoiseCharacter()
 void AWhiteNoiseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	this->RegisterOnGameMode();
 	/* mesh(es) not initialised in constructor, attach at beginplay */
 	WeaponGripPoint->AttachToComponent(this->GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("RightHand"));
 	
 	/* reset relative rotation after attachement */
 	WeaponGripPoint->SetRelativeRotation(FQuat::MakeFromEuler(FVector(-90.0f, 170.0f, 80.0f))); //todo: Better solution?
+}
+
+bool AWhiteNoiseCharacter::RegisterOnGameMode()
+{
+	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
+	if (GMBase != nullptr)
+	{
+		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
+		if (GMWNBase != nullptr)
+		{
+			return GMWNBase->RegisterPlayer(this);
+		}
+	}
+
+	return false;
 }
 
 void AWhiteNoiseCharacter::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
@@ -299,4 +316,33 @@ void AWhiteNoiseCharacter::WeaponFire_Start()
 void AWhiteNoiseCharacter::WeaponFire_Stop()
 {
 	this->bIsFiring = false;
+}
+
+/** */
+bool AWhiteNoiseCharacter::hasItemEquipped() const
+{
+	if (this->CurrentWeapon != nullptr)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+/** */
+FString AWhiteNoiseCharacter::GetItemName() const
+{
+	return this->CurrentWeapon->GetName();
+}
+
+/** */
+UClass* AWhiteNoiseCharacter::GetItemClass() const
+{
+	return this->CurrentWeapon->GetClass();
+}
+
+/** */
+FTransform AWhiteNoiseCharacter::GetItemTransform() const
+{
+	return this->CurrentWeapon->GetActorTransform();
 }

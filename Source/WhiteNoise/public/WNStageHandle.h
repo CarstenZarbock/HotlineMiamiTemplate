@@ -67,6 +67,9 @@ private:
 	/** Contains all dynamic spawned actors while playing a stage, excludes actors placed on map. */
 	TArray<AActor*> GarbageActors;
 
+	FActorSaveData* PlayerCharacter;
+	FActorSaveData* PlayerItem;
+
 	/** Cleans up GarbageActors on the current stage */
 	void EraseGarbage();
 
@@ -77,11 +80,20 @@ public:
 	/** */
 	~StageHandle();
 
+	/** */
+	bool RegisterPlayer(APawn* PlayerCharacter);
+
+	/** */
+	bool UpdatePlayer(APawn* PlayerCharacter);
+
 	/** Adds an actor to the given stage */
 	bool Register(AActor* TargetActor, int32 StageID, bool bIsGarbage);
 
 	/** Spawns all registered actors for this stage  */
 	void RespawnEntities(UWorld* World, int32 StageID);
+
+	/** */
+	void RespawnPlayer(UWorld* World);
 
 	/** Destroys all registered actors for this stage */
 	void EraseStage(UWorld* World, int32 StageID);

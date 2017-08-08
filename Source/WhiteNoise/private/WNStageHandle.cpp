@@ -8,13 +8,19 @@
 /************************************************************************/
 #include "WhiteNoise.h"
 #include "WNStageHandle.h"
+#include "WNCharacter.h"
+#include "WNWeapon.h"
 
 StageHandle::StageHandle()
 {
+	this->PlayerCharacter = new FActorSaveData();
+	this->PlayerItem = new FActorSaveData();
 }
 
 StageHandle::~StageHandle()
 {
+	delete this->PlayerCharacter;
+	delete this->PlayerItem;
 }
 
 int32 StageHandle::CheckStageArraySize(int32 StageID)
@@ -38,6 +44,102 @@ int32 StageHandle::CheckStageArraySize(int32 StageID)
 	UE_LOG(LogTemp, Warning, TEXT("Amount of stages after StageHandle::CheckStageArraySize: %d"), this->Stages.Num());
 
 	return newIndex;
+}
+
+bool StageHandle::RegisterPlayer(APawn* PlayerCharacter)
+{
+	/* Pawn Itself */
+	FActorSaveData ActorRecord;
+	ActorRecord.ActorName = FName(*PlayerCharacter->GetName());
+	ActorRecord.ActorClass = PlayerCharacter->GetClass()->GetPathName();
+	ActorRecord.ActorTransform = PlayerCharacter->GetActorTransform();
+	ActorRecord.LastActor = PlayerCharacter;
+
+	FMemoryWriter MemoryWriter(ActorRecord.ActorData, true);
+	FSaveGameArchive Ar(MemoryWriter);
+	PlayerCharacter->Serialize(Ar);
+
+	delete this->PlayerCharacter;
+	this->PlayerCharacter = new FActorSaveData(ActorRecord);
+
+	/* Equipped Weapon */
+	AWhiteNoiseCharacter* WNPlayerCharacter = Cast<AWhiteNoiseCharacter>(PlayerCharacter);
+	if (WNPlayerCharacter != nullptr)
+	{
+		if (WNPlayerCharacter->hasItemEquipped())
+		{
+			FActorSaveData ActorRecord;
+			ActorRecord.ActorName = FName(*WNPlayerCharacter->GetItemName());
+			ActorRecord.ActorClass = WNPlayerCharacter->GetItemClass()->GetPathName();
+			ActorRecord.ActorTransform = WNPlayerCharacter->GetItemTransform();
+			ActorRecord.LastActor = WNPlayerCharacter->CurrentWeapon;
+
+			FMemoryWriter MemoryWriter(ActorRecord.ActorData, true);
+			FSaveGameArchive Ar(MemoryWriter);
+			WNPlayerCharacter->CurrentWeapon->Serialize(Ar);
+
+			delete this->PlayerItem;
+			this->PlayerItem = new FActorSaveData(ActorRecord);
+		}
+		else
+		{
+			this->PlayerItem = nullptr;
+		}
+	}
+
+	if (this->PlayerCharacter != nullptr) { return true; }
+
+	return false;
+}
+
+bool StageHandle::UpdatePlayer(APawn* PlayerCharacter)
+{
+	UE_LOG(LogTemp, Warning, TEXT("StageHandle::Update Player"));
+
+	/* Pawn Itself */
+	FActorSaveData ActorRecord;
+	ActorRecord.ActorName = FName(*PlayerCharacter->GetName());
+	ActorRecord.ActorClass = PlayerCharacter->GetClass()->GetPathName();
+	ActorRecord.ActorTransform = PlayerCharacter->GetActorTransform();
+	ActorRecord.LastActor = PlayerCharacter;
+
+	FMemoryWriter MemoryWriter(ActorRecord.ActorData, true);
+	FSaveGameArchive Ar(MemoryWriter);
+	PlayerCharacter->Serialize(Ar);
+
+	delete this->PlayerCharacter;
+	this->PlayerCharacter = new FActorSaveData(ActorRecord);
+
+	/* Equipped Item */
+	AWhiteNoiseCharacter* WNPlayerCharacter = Cast<AWhiteNoiseCharacter>(PlayerCharacter);
+	if (WNPlayerCharacter != nullptr)
+	{
+		if (WNPlayerCharacter->hasItemEquipped())
+		{
+			FActorSaveData ActorRecord;
+			ActorRecord.ActorName = FName(*WNPlayerCharacter->GetItemName());
+			ActorRecord.ActorClass = WNPlayerCharacter->GetItemClass()->GetPathName();
+			ActorRecord.ActorTransform = WNPlayerCharacter->GetItemTransform();
+			ActorRecord.LastActor = WNPlayerCharacter->CurrentWeapon;
+			WNPlayerCharacter->CurrentWeapon->MarkAsGarbage();
+			WNPlayerCharacter->CurrentWeapon->bIsRestartWeapon = true;
+
+			FMemoryWriter MemoryWriter(ActorRecord.ActorData, true);
+			FSaveGameArchive Ar(MemoryWriter);
+			WNPlayerCharacter->CurrentWeapon->Serialize(Ar);
+
+			delete this->PlayerItem;
+			this->PlayerItem = new FActorSaveData(ActorRecord);
+		}
+		else
+		{
+			this->PlayerItem = nullptr;
+		}
+	}
+
+	if (this->PlayerCharacter != nullptr) { return true; }
+
+	return false;
 }
 
 bool StageHandle::Register(AActor* TargetActor, int32 StageID, bool bIsGarbage = false)
@@ -125,6 +227,77 @@ void StageHandle::EraseStage(UWorld* World, int32 StageID)
 			}
 
 			ActorEntity->LastActor = nullptr;
+		}
+	}
+
+	/* Erase Player :: Split Function? */
+	if (this->PlayerCharacter->LastActor != nullptr)
+	{
+		this->PlayerCharacter->LastActor->Destroy();
+		this->PlayerCharacter->LastActor = nullptr;
+	}
+}
+
+void StageHandle::RespawnPlayer(UWorld* World)
+{
+	FActorSaveData* ActorEntity = this->PlayerCharacter;
+	FTransform SpawnTrans = ActorEntity->ActorTransform;
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Name = ActorEntity->ActorName;
+
+
+	UClass* SpawnClass = FindObject<UClass>(ANY_PACKAGE, *ActorEntity->ActorClass);
+	if (SpawnClass)
+	{
+		AActor* NewActor = World->SpawnActorDeferred<AActor>(SpawnClass, SpawnTrans);
+		ActorEntity->LastActor = NewActor;
+		FMemoryReader MemoryReader(ActorEntity->ActorData, true);
+		FSaveGameArchive Ar(MemoryReader);
+		NewActor->Serialize(Ar);
+
+		//Deferred ignores the BP Constructor, be sure to apply the BP Class transform				
+		NewActor->SetActorTransform(SpawnTrans, false, nullptr, ETeleportType::TeleportPhysics);
+		NewActor->FinishSpawning(SpawnTrans);
+
+		/* Possess new pawn */
+		GWorld->GetFirstPlayerController()->Possess(Cast<APawn>(NewActor));
+
+		/* Equipped item */
+		if (this->PlayerItem != nullptr)
+		{
+
+			ActorEntity = this->PlayerItem;
+			SpawnTrans = ActorEntity->ActorTransform;
+			SpawnParams;
+			SpawnParams.Name = ActorEntity->ActorName;
+
+			SpawnClass = FindObject<UClass>(ANY_PACKAGE, *ActorEntity->ActorClass);
+			if (SpawnClass)
+			{
+				AActor* NewItemActor = World->SpawnActorDeferred<AActor>(SpawnClass, SpawnTrans);
+				AWeapon* NewWeaponActor = Cast<AWeapon>(NewItemActor);
+
+				ActorEntity->LastActor = NewItemActor;
+				FMemoryReader MemoryReader(ActorEntity->ActorData, true);
+				FSaveGameArchive Ar(MemoryReader);
+				NewItemActor->Serialize(Ar);
+
+				//Deferred ignores the BP Constructor, be sure to apply the BP Class transform				
+				NewItemActor->SetActorTransform(SpawnTrans, false, nullptr, ETeleportType::TeleportPhysics);
+
+				if (NewWeaponActor != nullptr)
+				{
+					NewWeaponActor->MarkAsGarbage();
+				}
+
+				NewItemActor->FinishSpawning(SpawnTrans);
+
+				AWhiteNoiseCharacter* PlayerChar = Cast<AWhiteNoiseCharacter>(NewActor);
+				if (PlayerChar != nullptr && NewWeaponActor != nullptr)
+				{
+					PlayerChar->ForceWeaponEquip(NewWeaponActor);
+				}
+			}
 		}
 	}
 }

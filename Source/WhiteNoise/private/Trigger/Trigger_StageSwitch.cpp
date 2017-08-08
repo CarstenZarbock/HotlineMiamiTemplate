@@ -64,9 +64,11 @@ void AStageSwitch::TriggerExecute(AActor* OtherActor)
 	this->SetActive(false);
 
 	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
+	AWhiteNoiseGameMode* GMWNBase = nullptr;
+
 	if (GMBase != nullptr)
 	{
-		AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
+		GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
 		if (GMWNBase != nullptr)
 		{
 			GMWNBase->IncreaseStage();
@@ -89,7 +91,13 @@ void AStageSwitch::TriggerExecute(AActor* OtherActor)
 			OtherActor->SetActorLocation(TargetStart->GetActorLocation());
 			OtherActor->SetActorRotation(TargetStart->GetActorRotation());
 			UE_LOG(LogTemp, Warning, TEXT("StageSwitch::Teleport Player"));
+
 			// -> Register Player
+			if (GMWNBase != nullptr)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("StageSwitch::Teleport Player 2"));
+				GMWNBase->UpdatePlayer(Cast<APawn>(OtherActor));
+			}
 			return;
 		}
 	}

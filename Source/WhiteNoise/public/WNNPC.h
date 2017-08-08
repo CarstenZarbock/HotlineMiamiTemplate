@@ -124,7 +124,7 @@ public:
 	void MarkAsGarbage() { this->bIsGarbage = true; }
 	
 	/** */
-	bool IsAlive() const { return this->bIsAlive && (this->Health > 0); }
+	bool IsAlive() const { return this->bIsAlive; }
 
 	/** Changes the current NPC AI state */
 	void ChangeAIState(ETargetEnemyState newState);

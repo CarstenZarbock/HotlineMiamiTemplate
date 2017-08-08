@@ -35,6 +35,12 @@ public:
 	/** Registers an actor as in world, used by stage reset */
 	bool Register(AActor* TargetActor, bool bIsGarbage);
 
+	/** */
+	bool RegisterPlayer(APawn* PlayerCharacter);
+
+	/** */
+	bool UpdatePlayer(APawn* PlayerCharacter);
+
 	/** Deletes all actors and respawns them */
 	bool RestartStage();
 
