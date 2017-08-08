@@ -34,6 +34,24 @@ void AWeapon::BeginPlay()
 	//this->ChangeState(EWeaponState::WS_WORLD);
 }
 
+bool AWeapon::UpdateAsGarbage()
+{
+	if (this->bIsGarbage)
+	{
+		AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();
+		if (GMBase != nullptr)
+		{
+			AWhiteNoiseGameMode* GMWNBase = Cast<AWhiteNoiseGameMode>(GMBase);
+			if (GMWNBase != nullptr)
+			{
+				return GMWNBase->UpdateActorAsGarbage(this);
+			}
+		}
+	}
+
+	return false;
+}
+
 bool AWeapon::RegisterOnGameMode()
 {
 	AGameModeBase* GMBase = GetWorld()->GetAuthGameMode();

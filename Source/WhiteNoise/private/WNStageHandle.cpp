@@ -122,6 +122,7 @@ bool StageHandle::UpdatePlayer(APawn* PlayerCharacter)
 			ActorRecord.ActorTransform = WNPlayerCharacter->GetItemTransform();
 			ActorRecord.LastActor = WNPlayerCharacter->CurrentWeapon;
 			WNPlayerCharacter->CurrentWeapon->MarkAsGarbage();
+			WNPlayerCharacter->CurrentWeapon->UpdateAsGarbage();
 			WNPlayerCharacter->CurrentWeapon->bIsRestartWeapon = true;
 
 			FMemoryWriter MemoryWriter(ActorRecord.ActorData, true);
@@ -140,6 +141,30 @@ bool StageHandle::UpdatePlayer(APawn* PlayerCharacter)
 	if (this->PlayerCharacter != nullptr) { return true; }
 
 	return false;
+}
+
+bool StageHandle::UpdateActorAsGarbage(AActor* TargetActor, int32 StageID)
+{
+	/** Remove from non garbage list */
+	int32 StageIndex = this->CheckStageArraySize(StageID);
+
+	if (StageIndex == -1)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("WARNING: Invalid StageID detected ( %d ) StageHandle::Register"), StageIndex);
+		return false;
+	}
+
+	for (int i = 0; i < this->Stages[StageIndex].SpawnEntity.Num(); i++)
+	{
+		if (this->Stages[StageIndex].SpawnEntity[i].LastActor == TargetActor)
+		{
+			this->Stages[StageIndex].SpawnEntity.RemoveAt(i);
+			break;
+		}
+	}
+
+	/** Register again as garbage */
+	return this->Register(TargetActor, StageID, true);
 }
 
 bool StageHandle::Register(AActor* TargetActor, int32 StageID, bool bIsGarbage = false)

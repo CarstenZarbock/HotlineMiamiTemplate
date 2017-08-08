@@ -32,6 +32,11 @@ bool AWhiteNoiseGameMode::RestartStage()
 	return true;
 }
 
+bool AWhiteNoiseGameMode::UpdateActorAsGarbage(AActor* TargetActor)
+{
+	return this->StageHandler->UpdateActorAsGarbage(TargetActor, this->CurrentStage);
+}
+
 bool AWhiteNoiseGameMode::Register(AActor* TargetActor, bool bIsGarbage = false)
 {
 	if (bIsGarbage || this->bNeedStageInit)

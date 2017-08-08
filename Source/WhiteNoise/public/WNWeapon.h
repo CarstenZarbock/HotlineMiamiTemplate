@@ -116,6 +116,9 @@ public:
 	/** Registers the object as a garbage object @Stage Handler	*/
 	void MarkAsGarbage() { this->bIsGarbage = true; }
 
+	/** */
+	bool UpdateAsGarbage();
+
 	/** Executes firing */
 	virtual void Fire(FVector targetWorldLocation);
 

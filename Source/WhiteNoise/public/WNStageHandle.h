@@ -100,4 +100,6 @@ public:
 
 	/** Called by GameMode when next stage is starting */
 	void IncreaseStage();
+
+	bool UpdateActorAsGarbage(AActor* TargetActor, int32 StageID);
 };

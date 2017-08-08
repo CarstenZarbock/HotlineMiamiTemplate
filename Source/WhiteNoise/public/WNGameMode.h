@@ -36,6 +36,9 @@ public:
 	bool Register(AActor* TargetActor, bool bIsGarbage);
 
 	/** */
+	bool UpdateActorAsGarbage(AActor* TargetActor);
+
+	/** */
 	bool RegisterPlayer(APawn* PlayerCharacter);
 
 	/** */
